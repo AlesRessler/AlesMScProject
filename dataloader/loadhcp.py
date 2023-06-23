@@ -1,11 +1,8 @@
 import scipy
 import numpy as np
-import os
 
 def load_hcp(data_path='./data/data.mat', bvecs_path='./data/bvecs'):
     # Load data and permute axes
-    
-    print(os.getcwd())
     
     matlab_contents = scipy.io.loadmat(data_path)
     dwis = matlab_contents['dwis']
@@ -28,4 +25,4 @@ def load_hcp(data_path='./data/data.mat', bvecs_path='./data/bvecs'):
 
     bvals = 1000*np.sum(np.multiply(qhat, qhat) , axis=0);
     
-    return (bvals, qhat)
+    return (bvals, qhat, dwis)
