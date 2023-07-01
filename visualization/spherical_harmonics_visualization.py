@@ -50,8 +50,6 @@ def generate_animation(rgb, r, fig, ax, mode, cartesian_coordinates):
 
 
 def visualizeAllHarmonicsOfDegree(degree, mode='sphere', resolution=50):
-    
-    matplotlib.use('TkAgg')
 
     thetas = np.linspace(0, np.pi, resolution)
     phis = np.linspace(0, 2*np.pi, resolution)
