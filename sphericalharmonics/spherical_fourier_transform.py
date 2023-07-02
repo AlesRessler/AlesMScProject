@@ -3,6 +3,18 @@ from sphericalharmonics.basis_functions import real_and_antipodal_spherical_harm
 from sphericalharmonics.utils import get_storage_index
 
 def get_design_matrix(max_degree, number_of_samples, thetas, phis):
+    """
+    Computes design matrix B for least squares SH coefficients estimation
+    
+    Parameters
+    max_degree (int): maximum degree of the spherical harmonic to be estimated, l>0
+    number_of_samples (int): number of samples available for estimation
+    thetas (np.array): 1D array of polar angles
+    phis (np.array): 1D array of azimuthal angles
+    
+    Returns
+    (np.array): 2D design matrix
+    """
     number_of_coefficients = int(0.5 * (max_degree + 1) * (max_degree + 2))
 
     design_matrix = np.zeros((number_of_samples, number_of_coefficients))
@@ -14,9 +26,27 @@ def get_design_matrix(max_degree, number_of_samples, thetas, phis):
     return design_matrix
 
 def get_spherical_fourier_transform(design_matrix):
+    """
+    Computes spherical fourier transform matrix
+    
+    Parameters:
+    design_matrix (np.array): 2D design matrix (can be computed by the get_design_matrix function)
+    
+    Returns:
+    (np.array): 2D spherical fourier transform matrix
+    """
     spherical_fourier_transform = np.linalg.pinv(design_matrix.T @ design_matrix) @ design_matrix.T
     
     return spherical_fourier_transform
 
 def get_inverse_spherical_fourier_transform(design_matrix):
+    """
+    Computes inverse spherical fourier transform matrix
+    
+    Parameters:
+    design_matrix (np.array): 2D design matrix (can be computed by the get_design_matrix function)
+    
+    Returns:
+    (np.array): 2D inverse spherical fourier transform matrix
+    """
     return design_matrix
