@@ -95,3 +95,60 @@ def visualizeAllHarmonicsOfDegree(degree, mode='sphere', resolution=50):
         html = display.HTML(video)
         display.display(html)
         plt.close(fig)
+        
+def plotAllHarmonicsUpToDegree(max_degree, resolution=50):
+    """
+    Plots spherical harmonics up to degree l and all possible orders m.
+    
+    Parameters:
+    max_degree (int): specifies maximum degree of spherical harmonics to be visualized
+    resolution: specifies resolution of the visualization
+    
+    Returns:
+    (None)
+    """
+    phis = np.linspace(0, np.pi, 50)
+    thetas = np.linspace(0, 2*np.pi, 50)
+    phis, thetas = np.meshgrid(phis, thetas)
+
+    # The Cartesian coordinates of the unit sphere
+    x = np.sin(phis) * np.cos(thetas)
+    y = np.sin(phis) * np.sin(thetas)
+    z = np.cos(phis)
+    
+    fig = plt.figure(figsize=(10, 5))
+    
+    number_of_plot_rows = max_degree + 1
+    number_of_plot_columns = max_degree*2 + 1
+    subplot_counter = 1
+    
+    for degree in range(max_degree+1):
+        for order in range(-degree,degree+1):
+            # Calculate the spherical harmonic Y(l,m) and normalize to [0,1]
+            fcolors = sph_harm(order, degree, thetas, phis).real
+            fmax, fmin = fcolors.max(), fcolors.min()
+            fcolors = (fcolors - fmin)/(fmax - fmin)
+            
+            fcolors = np.nan_to_num(fcolors,nan=0.0)
+
+            # Set the aspect ratio to 1 so our sphere looks spherical
+            #fig = plt.figure(figsize=plt.figaspect(1.))
+            ax = fig.add_subplot(number_of_plot_rows, number_of_plot_columns, subplot_counter, projection='3d')
+            print(number_of_plot_rows, number_of_plot_columns, subplot_counter)
+            ax.plot_surface(x, y, z,  rstride=1, cstride=1, facecolors=cm.gist_rainbow(fcolors))
+            
+            # Turn off the axis planes
+            ax.set_axis_off()
+            
+            subplot_counter += 1
+        subplot_counter += number_of_plot_columns-(degree*2)-1
+            
+    # Create colorbar
+    fig.subplots_adjust(right=0.8)
+    cbar_ax = fig.add_axes([0.85, 0.15, 0.01, 0.7])
+    
+    sm = cm.ScalarMappable(cmap='gist_rainbow')
+    sm.set_clim(vmin=fmin, vmax=fmax)
+    cbar = fig.colorbar(sm, cax=cbar_ax)
+
+    plt.show()
