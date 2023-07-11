@@ -55,8 +55,8 @@ def visualizeAllHarmonicsOfDegree(degree, mode='sphere', resolution=50):
     
     Parameters:
     degree (int): specifies degree of spherical harmonics to be visualized
-    mode(string): specifies mode of the visualization values: sphere, radial
-    resolution: specifies resolution of the visualization
+    mode (string): specifies mode of the visualization values: sphere, radial
+    resolution (int): specifies resolution of the visualization
     
     Returns:
     (None)
@@ -102,7 +102,7 @@ def plotAllHarmonicsUpToDegree(max_degree, resolution=50):
     
     Parameters:
     max_degree (int): specifies maximum degree of spherical harmonics to be visualized
-    resolution: specifies resolution of the visualization
+    resolution (int): specifies resolution of the visualization
     
     Returns:
     (None)
