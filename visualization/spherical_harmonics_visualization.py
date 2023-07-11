@@ -107,8 +107,8 @@ def plotAllHarmonicsUpToDegree(max_degree, resolution=50):
     Returns:
     (None)
     """
-    phis = np.linspace(0, np.pi, 50)
-    thetas = np.linspace(0, 2*np.pi, 50)
+    phis = np.linspace(0, np.pi, resolution)
+    thetas = np.linspace(0, 2*np.pi, resolution)
     phis, thetas = np.meshgrid(phis, thetas)
 
     # The Cartesian coordinates of the unit sphere
@@ -131,22 +131,21 @@ def plotAllHarmonicsUpToDegree(max_degree, resolution=50):
             
             fcolors = np.nan_to_num(fcolors,nan=0.0)
 
-            # Set the aspect ratio to 1 so our sphere looks spherical
-            #fig = plt.figure(figsize=plt.figaspect(1.))
+            # Add subplot and plot the sphere
             ax = fig.add_subplot(number_of_plot_rows, number_of_plot_columns, subplot_counter, projection='3d')
-            print(number_of_plot_rows, number_of_plot_columns, subplot_counter)
             ax.plot_surface(x, y, z,  rstride=1, cstride=1, facecolors=cm.gist_rainbow(fcolors))
             
             # Turn off the axis planes
             ax.set_axis_off()
             
             subplot_counter += 1
+        
+        # Switch to the next row of plots
         subplot_counter += number_of_plot_columns-(degree*2)-1
             
     # Create colorbar
     fig.subplots_adjust(right=0.8)
     cbar_ax = fig.add_axes([0.85, 0.15, 0.01, 0.7])
-    
     sm = cm.ScalarMappable(cmap='gist_rainbow')
     sm.set_clim(vmin=fmin, vmax=fmax)
     cbar = fig.colorbar(sm, cax=cbar_ax)
