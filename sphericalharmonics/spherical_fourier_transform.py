@@ -1,6 +1,6 @@
 import numpy as np
 from sphericalharmonics.basis_functions import real_and_antipodal_spherical_harmonic_basis
-from sphericalharmonics.utils import get_storage_index
+from sphericalharmonics.utils import get_storage_index, get_number_of_coefficients
 
 def get_design_matrix(max_degree, number_of_samples, thetas, phis):
     """
@@ -15,10 +15,11 @@ def get_design_matrix(max_degree, number_of_samples, thetas, phis):
     Returns
     (np.array): 2D design matrix
     """
-    number_of_coefficients = int(0.5 * (max_degree + 1) * (max_degree + 2))
+    number_of_coefficients = get_number_of_coefficients(max_degree)
 
     design_matrix = np.zeros((number_of_samples, number_of_coefficients))
-
+    
+    # Odd degree spherical harmonics can be skipped thus the step of 2 is used
     for l in range(0, max_degree + 1, 2):
         for m in range(-l, l + 1):
             design_matrix[:, get_storage_index(l,m)] = real_and_antipodal_spherical_harmonic_basis(l, m, thetas, phis)

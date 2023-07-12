@@ -8,8 +8,8 @@ def real_and_antipodal_spherical_harmonic_basis(l, m, thetas, phis):
     Parameters
     l (int): degree of the psherical harmonic, l>0
     m (int): order of the spherical harmonic, -l <= m <= l
-    thetas (np.array): 1D array of polar angles
-    phis (np.array): 1D array of azimuthal angles
+    thetas (np.array): 1D array of polar angles [0, pi]
+    phis (np.array): 1D array of azimuthal angles [0, 2pi]
     
     Returns
     (np.array): 1D array of the values of the spherical harmonics evaluated at thetas and phis

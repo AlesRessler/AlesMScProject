@@ -107,9 +107,9 @@ def plotAllHarmonicsUpToDegree(max_degree, resolution=50):
     Returns:
     (None)
     """
-    phis = np.linspace(0, np.pi, resolution)
-    thetas = np.linspace(0, 2*np.pi, resolution)
-    phis, thetas = np.meshgrid(phis, thetas)
+    thetas = np.linspace(0, np.pi, resolution)
+    phis = np.linspace(0, 2*np.pi, resolution)
+    thetas, phis = np.meshgrid(thetas, phis)
 
     # The Cartesian coordinates of the unit sphere
     x = np.sin(phis) * np.cos(thetas)
