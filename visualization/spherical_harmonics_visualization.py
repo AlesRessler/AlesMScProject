@@ -112,9 +112,9 @@ def plotAllHarmonicsUpToDegree(max_degree, resolution=50):
     thetas, phis = np.meshgrid(thetas, phis)
 
     # The Cartesian coordinates of the unit sphere
-    x = np.sin(phis) * np.cos(thetas)
-    y = np.sin(phis) * np.sin(thetas)
-    z = np.cos(phis)
+    x = np.sin(thetas) * np.cos(phis)
+    y = np.sin(thetas) * np.sin(phis)
+    z = np.cos(thetas)
     
     fig = plt.figure(figsize=(10, 5))
     
@@ -125,7 +125,7 @@ def plotAllHarmonicsUpToDegree(max_degree, resolution=50):
     for degree in range(max_degree+1):
         for order in range(-degree,degree+1):
             # Calculate the spherical harmonic Y(l,m) and normalize to [0,1]
-            fcolors = sph_harm(order, degree, thetas, phis).real
+            fcolors = sph_harm(order, degree, phis, thetas).real
             fmax, fmin = fcolors.max(), fcolors.min()
             fcolors = (fcolors - fmin)/(fmax - fmin)
             

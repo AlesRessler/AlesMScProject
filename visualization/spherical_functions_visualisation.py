@@ -31,8 +31,6 @@ def get_spherical_function_values_from_spherical_expansion(expansion_coefficient
         for m in range(-l, l + 1):
             coefficient_index = get_storage_index(l,m)
             fcolors += real_and_antipodal_spherical_harmonic_basis(l, m, thetas, phis) * expansion_coefficients[coefficient_index]
-            print(fcolors)
-            print()
     
     fmax, fmin = fcolors.max(), fcolors.min()
     fcolors = (fcolors - fmin)/(fmax - fmin)
