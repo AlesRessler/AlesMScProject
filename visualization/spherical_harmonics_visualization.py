@@ -7,6 +7,7 @@ from matplotlib import animation
 from matplotlib.colors import LightSource
 from IPython import display
 import matplotlib
+from matplotlib.colors import Normalize
 
 def get_SphHarm(l, m, component, thetas, phis):
     ## Calculate the spherical harmonic Y(l,m) and normalize to [0,1]
@@ -116,38 +117,61 @@ def plotAllHarmonicsUpToDegree(max_degree, resolution=50):
     y = np.sin(thetas) * np.sin(phis)
     z = np.cos(thetas)
     
-    fig = plt.figure(figsize=(10, 5))
+    fig = plt.figure(figsize=(15, 10))
     
     number_of_plot_rows = max_degree + 1
     number_of_plot_columns = max_degree*2 + 1
     subplot_counter = 1
     
+    # Array of SH surfaces to be plotted
+    surfaces = []
+    
     for degree in range(max_degree+1):
         for order in range(-degree,degree+1):
-            # Calculate the spherical harmonic Y(l,m) and normalize to [0,1]
+            # Calculate the spherical harmonic Y(l,m)
             fcolors = sph_harm(order, degree, phis, thetas).real
-            fmax, fmin = fcolors.max(), fcolors.min()
-            fcolors = (fcolors - fmin)/(fmax - fmin)
+            surfaces.append(fcolors)
+    
+    max_value = np.max(surfaces)
+    min_value = np.min(surfaces)
+    
+    # Squash the extreme values since majority of values are more in the middle.
+    # It also produces higher contrast plots
+    max_value = max_value*0.6
+    min_value = min_value*0.6
+    
+    # Set normalization to range [0,1] to fit the colormaps
+    cmap = plt.cm.gist_rainbow
+    normalization = Normalize(vmin=min_value, vmax=max_value)
+    sm = cm.ScalarMappable(cmap=cmap, norm=normalization)
+    
+    # Plot axes
+    axs = []
+    
+    # Index for the surfaces array
+    surface_id = 0
+    
+    for degree in range(max_degree+1):
+        for order in range(-degree,degree+1):
             
-            fcolors = np.nan_to_num(fcolors,nan=0.0)
-
             # Add subplot and plot the sphere
             ax = fig.add_subplot(number_of_plot_rows, number_of_plot_columns, subplot_counter, projection='3d')
-            ax.plot_surface(x, y, z,  rstride=1, cstride=1, facecolors=cm.gist_rainbow(fcolors))
+            
+            normalized_values = normalization(surfaces[surface_id])
+            
+            ax.plot_surface(x, y, z,  rstride=1, cstride=1, facecolors=cmap(normalized_values))
+            axs.append(ax)
             
             # Turn off the axis planes
             ax.set_axis_off()
             
             subplot_counter += 1
+            surface_id += 1
         
         # Switch to the next row of plots
         subplot_counter += number_of_plot_columns-(degree*2)-1
             
-    # Create colorbar
-    fig.subplots_adjust(right=0.8)
-    cbar_ax = fig.add_axes([0.85, 0.15, 0.01, 0.7])
-    sm = cm.ScalarMappable(cmap='gist_rainbow')
-    sm.set_clim(vmin=fmin, vmax=fmax)
-    cbar = fig.colorbar(sm, cax=cbar_ax)
-
+    # Create colorbar    
+    cbar = fig.colorbar(sm, ax=axs)
+    
     plt.show()
