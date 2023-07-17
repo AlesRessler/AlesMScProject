@@ -119,6 +119,8 @@ def plotAllHarmonicsUpToDegree(max_degree, resolution=50):
     
     fig = plt.figure(figsize=(15, 10))
     
+    fig.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=-0.2, hspace=-0.6)
+    
     number_of_plot_rows = max_degree + 1
     number_of_plot_columns = max_degree*2 + 1
     subplot_counter = 1
@@ -159,7 +161,7 @@ def plotAllHarmonicsUpToDegree(max_degree, resolution=50):
             
             normalized_values = normalization(surfaces[surface_id])
             
-            ax.plot_surface(x, y, z,  rstride=1, cstride=1, facecolors=cmap(normalized_values))
+            ax.plot_surface(x, y, z,  rstride=1, cstride=1, facecolors=cmap(normalized_values), antialiased=True)
             axs.append(ax)
             
             # Turn off the axis planes
@@ -171,7 +173,9 @@ def plotAllHarmonicsUpToDegree(max_degree, resolution=50):
         # Switch to the next row of plots
         subplot_counter += number_of_plot_columns-(degree*2)-1
             
-    # Create colorbar    
-    cbar = fig.colorbar(sm, ax=axs)
+    # Create colorbar
+    fig.subplots_adjust(right=0.8)
+    cbar_ax = fig.add_axes([0.85, 0.15, 0.01, 0.7])
+    cbar = fig.colorbar(sm, ax=axs, cax=cbar_ax)
     
     plt.show()
