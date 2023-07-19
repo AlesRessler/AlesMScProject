@@ -19,6 +19,13 @@ def load_dt_simulated(number_of_data_points=90, b_value=1000, b_0_signal=3000, i
     (np.array, np.array, np.array): The first array is 1D containg the b-values, 2D array containing the gradient orientations such that the first dimension determines the gradient component i.e arr[0]=x_component, arr[1]=y_component and arr[2]=z_component, third array is 1D containing DWI signals
     """
     
+    if eigenvectors is None:
+        eigenvectors = np.zeros((3,3))
+        
+        eigenvectors[0,0] = 1.0
+        eigenvectors[1,1] = 1.0
+        eigenvectors[2,2] = 1.0
+    
     noise_standard_deviation = np.sqrt(noise_variance)
     
     diffusion_tensor = compute_diffusion_tensor(eigenvalues, eigenvectors)
@@ -52,7 +59,13 @@ def load_dt_simulated(number_of_data_points=90, b_value=1000, b_0_signal=3000, i
             
             measurement = simulate_signal(b_value, random_unit_vector, b_0_signal, diffusion_tensor)
             
-            measurements.append(measurement)
+            noisy_measurement = measurement + generator.normal(loc=0.0, scale=noise_standard_deviation)
+            
+            measurements.append(noisy_measurement)
+    
+    bvals = np.array(bvals)
+    qhat = np.array(qhat)
+    measurements = np.array(measurements)
     
     return (bvals, qhat, measurements)
         
@@ -108,8 +121,8 @@ def generate_random_unit_vector(dimension, generator):
     np.array(dimension x 1): random unit vector
     """
     
-    random_vector = generator.random(dimension)
-    random_unit_vector = random_vector / norm(v)
+    random_vector = generator.uniform(low=-1.0, high=1.0, size=dimension)
+    random_unit_vector = random_vector / norm(random_vector)
     
     return random_unit_vector
     
