@@ -6,13 +6,13 @@ def get_design_matrix(max_degree, number_of_samples, thetas, phis):
     """
     Computes design matrix B for least squares SH coefficients estimation
     
-    Parameters
+    Parameters:
     max_degree (int): maximum degree of the spherical harmonic to be estimated, l>0
     number_of_samples (int): number of samples available for estimation
     thetas (np.array): 1D array of polar angles
     phis (np.array): 1D array of azimuthal angles
     
-    Returns
+    Returns:
     (np.array): 2D design matrix
     """
     number_of_coefficients = get_number_of_coefficients(max_degree)
