@@ -1,20 +1,61 @@
-def load_dt_simulated(number_of_data_points=90, b-value=1000, b_0_signal= include_b_0=False, noise_variance=10000, eigenvalues=(1,0,0), eigenvectors=None):
+import numpy as np
+from numpy.linalg import pinv, norm
+
+def load_dt_simulated(number_of_data_points=90, b_value=1000, b_0_signal=3000, include_b_0=False, noise_variance=10000, eigenvalues=(1,0,0), eigenvectors=None, seed=1):
     """
     Returns dataset simulated from the diffusion tensor model with specified number of data points and noise variance.
     
     Parameters:
     number_of_data_points (int): number of data points to be simulated
-    b-value (int): non-zero b-value used in the simulation
+    b_value (int): non-zero b-value used in the simulation
+    b_0_signal (int): non-diffusion weighted signal
     include_b_0 (bool): determines whether the data points should include b=0 measurements
     noise_variance (int): variance of the noise component
     eigenvalues (3-tuple): eigenvalues of the eigenvectors of the diffusion tensor
     eigenvectors (np.array(3x3)): eigenvectors (column vectors) of the diffusion tensor, if None then vectors (1,0,0),(0,1,0),(0,0,1) are used
+    seed (int): random generator seed
     
     Returns:
-    (int, np.array, np.array): b-values, 2D array containing the gradient orientations such that the first dimension determines the gradient component i.e arr[0]=x_component, arr[1]=y_component and arr[2]=z_component, array of DWI signals
+    (np.array, np.array, np.array): The first array is 1D containg the b-values, 2D array containing the gradient orientations such that the first dimension determines the gradient component i.e arr[0]=x_component, arr[1]=y_component and arr[2]=z_component, third array is 1D containing DWI signals
     """
     
+    noise_standard_deviation = np.sqrt(noise_variance)
+    
     diffusion_tensor = compute_diffusion_tensor(eigenvalues, eigenvectors)
+    generator = np.random.default_rng(seed)
+    
+    bvals = []
+    qhat = [[],[],[]]
+    measurements = []
+    
+    for i in range(number_of_data_points):
+        
+        # If include_b_0 is true then every 10th measurement is b=0 measurement
+        if(include_b_0 and ((i+1) % 10 == 0)):
+            bvals.append(0)
+            
+            qhat[0].append(0.0)
+            qhat[1].append(0.0)
+            qhat[2].append(0.0)
+            
+            noisy_measurement = b_value + generator.normal(loc=0.0, scale=noise_standard_deviation)
+            
+            measurements.append(noisy_measurement)
+        else:
+            bvals.append(0)
+            
+            random_unit_vector = generate_random_unit_vector(3, generator)
+            
+            qhat[0].append(random_unit_vector[0])
+            qhat[1].append(random_unit_vector[1])
+            qhat[2].append(random_unit_vector[2])
+            
+            measurement = simulate_signal(b_value, random_unit_vector, b_0_signal, diffusion_tensor)
+            
+            measurements.append(measurement)
+    
+    return (bvals, qhat, measurements)
+        
     
 def compute_diffusion_tensor(eigenvalues, eigenvectors):
     """
@@ -38,3 +79,57 @@ def compute_diffusion_tensor(eigenvalues, eigenvectors):
     diffusion_tensor = eigenvectors @ diagonal_eigenvalue_matrix @ pinv(eigenvectors)
     
     return diffusion_tensor
+
+def simulate_signal(b_value, gradient, b_0_signal, diffusion_tensor):
+    """
+    Produce signal measurement according to the diffusion model.
+    
+    Parameters:
+    b-value (int): non-zero b-value used in the simulation
+    gradient (np.array(3x1)): unit (column) vector of the gradient direction
+    b_0_signal (int): non-diffusion weighted signal
+    diffusion_tensor (np.array(3x3)): diffusion tensor to be used for simulation
+    """
+    
+    signal = b_0_signal * np.exp(-b_value * (gradient.T @ diffusion_tensor @ gradient))
+    
+    return signal
+    
+def generate_random_unit_vector(dimension, generator):
+    """
+    Generates random unit vector of specified dimension.
+    
+    Parameters:
+    dimension (int): determines dimension of the vector
+    generator (np.random.Generator): generator to be used
+    
+    
+    Returns:
+    np.array(dimension x 1): random unit vector
+    """
+    
+    random_vector = generator.random(dimension)
+    random_unit_vector = random_vector / norm(v)
+    
+    return random_unit_vector
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
