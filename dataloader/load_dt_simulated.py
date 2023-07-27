@@ -124,9 +124,42 @@ def generate_random_unit_vector(dimension, generator):
     
     return random_unit_vector
     
+def load_dt_simulated_multiple_populations(number_of_data_points=90, b_value=1000, b_0_signal=3000, include_b_0=False, noise_standard_deviation=100, eigenvalues=[(1,0,0),(0,1,0)], eigenvectors=[None,None], fractions=[0.5,0.5], seed=1):
+    """
+    Returns dataset simulated from the diffusion tensor model with specified number of data points, noise standard deviation and multiple fibre populations.
     
+    Parameters:
+    number_of_data_points (int): number of data points to be simulated
+    b_value (int): non-zero b-value used in the simulation
+    b_0_signal (int): non-diffusion weighted signal
+    include_b_0 (bool): determines whether the data points should include b=0 measurements
+    noise_standard_deviation (int): standard deviation of the noise component
+    eigenvalues [(3-tuple)]: eigenvalues of the eigenvectors of the diffusion tensors (one 3-tuple for each fibre population)
+    eigenvectors [(np.array(3x3))]: eigenvectors (column vectors) of the diffusion tensor, if None then vectors (1,0,0),(0,1,0),(0,0,1) are used (one 3x3 matrix for each fibre population)
+    fractions [int]: volume fractions of each fibre population
+    seed (int): random generator seed
     
+    Returns:
+    (np.array, np.array, np.array): The first array is 1D containg the b-values, 2D array containing the gradient orientations such that the first dimension determines the gradient component i.e arr[0]=x_component, arr[1]=y_component and arr[2]=z_component, third array is 1D containing DWI signals
+    """
     
+    bvals = None
+    qhat = None
+    measurements = np.zeros(number_of_data_points)
+    
+    for i in range(len(eigenvalues)):
+        bvals_temp, qhat_temp, measurements_temp = load_dt_simulated(number_of_data_points=number_of_data_points, b_value=b_value, b_0_signal=b_0_signal, include_b_0=include_b_0, noise_standard_deviation=noise_standard_deviation, eigenvalues=eigenvalues[i], eigenvectors=eigenvectors[i], seed=1)
+        
+        if(i==0):
+            bvals = bvals_temp
+            qhat = qhat_temp
+        
+        # Weight the population signal by its volume fraction
+        measurements_temp = measurements_temp * fractions[i]
+        
+        measurements = measurements + measurements_temp
+        
+    return (bvals, qhat, measurements)
     
     
     
