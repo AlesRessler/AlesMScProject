@@ -1,16 +1,16 @@
 import numpy as np
 from numpy.linalg import pinv, norm
 
-def load_dt_simulated(number_of_data_points=90, b_value=1000, b_0_signal=3000, include_b_0=False, noise_variance=10000, eigenvalues=(1,0,0), eigenvectors=None, seed=1):
+def load_dt_simulated(number_of_data_points=90, b_value=1000, b_0_signal=3000, include_b_0=False, noise_standard_deviation=100, eigenvalues=(1,0,0), eigenvectors=None, seed=1):
     """
-    Returns dataset simulated from the diffusion tensor model with specified number of data points and noise variance.
+    Returns dataset simulated from the diffusion tensor model with specified number of data points and noise standard deviation.
     
     Parameters:
     number_of_data_points (int): number of data points to be simulated
     b_value (int): non-zero b-value used in the simulation
     b_0_signal (int): non-diffusion weighted signal
     include_b_0 (bool): determines whether the data points should include b=0 measurements
-    noise_variance (int): variance of the noise component
+    noise_standard_deviation (int): standard deviation of the noise component
     eigenvalues (3-tuple): eigenvalues of the eigenvectors of the diffusion tensor
     eigenvectors (np.array(3x3)): eigenvectors (column vectors) of the diffusion tensor, if None then vectors (1,0,0),(0,1,0),(0,0,1) are used
     seed (int): random generator seed
@@ -25,8 +25,6 @@ def load_dt_simulated(number_of_data_points=90, b_value=1000, b_0_signal=3000, i
         eigenvectors[0,0] = 1.0
         eigenvectors[1,1] = 1.0
         eigenvectors[2,2] = 1.0
-    
-    noise_standard_deviation = np.sqrt(noise_variance)
     
     diffusion_tensor = compute_diffusion_tensor(eigenvalues, eigenvectors)
     generator = np.random.default_rng(seed)
