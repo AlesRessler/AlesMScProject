@@ -25,8 +25,8 @@ def random_sampling(function, number_of_samples, coordinates='cartesian', seed=1
     
         random_unit_vectors = np.array(random_unit_vectors)
     
-        values = function(random_unit_vectors)
+        values = function(fibre_orientations=random_unit_vectors)
     
         return (random_unit_vectors, values)
-    else
+    else:
         raise Exception('Invalid coordinate system')
