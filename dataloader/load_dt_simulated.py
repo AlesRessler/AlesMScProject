@@ -47,7 +47,7 @@ def load_dt_simulated(number_of_data_points=90, b_value=1000, b_0_signal=3000, i
             
             measurements.append(noisy_measurement)
         else:
-            bvals.append(0)
+            bvals.append(b_value)
             
             random_unit_vector = generate_random_unit_vector(3, generator)
             
