@@ -167,8 +167,8 @@ def generate_random_unit_vector(dimension, generator):
 
 def load_dt_simulated_multiple_populations(number_of_data_points=90, b_value=1000, b_0_signal=3000, include_b_0=False,
                                            noise_standard_deviation=100, eigenvalues=[(1, 0, 0), (0, 1, 0)],
-                                           eigenvectors=[None, None], fractions=[0.5, 0.5], noise_type='rician', noise_generator=None,
-                                           gradient_generator=None):
+                                           eigenvectors=[None, None], fractions=[0.5, 0.5], noise_type='rician', noise_generator_seed=1,
+                                           gradient_generator_seed=1):
     """
     Returns dataset simulated from the diffusion tensor model with specified number of data points, noise standard deviation and multiple fibre populations.
     
@@ -189,10 +189,8 @@ def load_dt_simulated_multiple_populations(number_of_data_points=90, b_value=100
     (np.array, np.array, np.array): The first array is 1D containg the b-values, 2D array containing the gradient orientations such that the first dimension determines the gradient component i.e arr[0]=x_component, arr[1]=y_component and arr[2]=z_component, third array is 1D containing DWI signals
     """
 
-    if (noise_generator is None):
-        noise_generator = np.random.default_rng()
-    if (gradient_generator is None):
-        gradient_generator = np.random.default_rng(1)
+    noise_generator = np.random.default_rng(noise_generator_seed)
+    gradient_generator = np.random.default_rng(gradient_generator_seed)
 
     supported_noise_types = {'gaussian', 'rician', 'none'}
 
@@ -203,7 +201,7 @@ def load_dt_simulated_multiple_populations(number_of_data_points=90, b_value=100
     qhat = None
     measurements = np.zeros(number_of_data_points)
 
-    for i in range(len(eigenvalues)):
+    for i in range(len(fractions)):
         # Simulate measurements without noise
         bvals_temp, qhat_temp, measurements_temp = load_dt_simulated(number_of_data_points=number_of_data_points,
                                                                      b_value=b_value, b_0_signal=b_0_signal,
@@ -222,6 +220,9 @@ def load_dt_simulated_multiple_populations(number_of_data_points=90, b_value=100
         measurements_temp = measurements_temp * fractions[i]
 
         measurements = measurements + measurements_temp
+
+        # Reset RNG to produce the same gradient orientations in next iteration
+        gradient_generator = np.random.default_rng(gradient_generator_seed)
 
     # Add noise
     if (noise_type == 'gaussian'):
