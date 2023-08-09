@@ -11,7 +11,7 @@ def spherical_deconvolution_fit(fibre_response_function, measurements, qhat, b_v
     Computes spherical harmonics expansion coefficient of a fibre orientation density function (fODF).
 
     Parameters:
-    fibre_response_function (function): function that computes samples of a fibre response function (FRF). It must accept arguments of b-vector (np.array(3x1)) and (np.array(Nx3)) that specifies unit vectors describing the orientations of the fibres (where N is the number samples to be taken)
+    fibre_response_function (function): function that computes samples of a fibre response function (FRF). It must accept arguments of b-vector (np.array(1x3)) and (np.array(Nx3)) that specifies unit vectors describing the orientations of the fibres (where N is the number samples to be taken)
     measurements (np.array(1xM)): measured signals (where M is the number of measurements)
     qhat (np.array(3xM): 2D array containing the gradient orientations such that the first dimension determines the gradient component i.e arr[0]=x_component, arr[1]=y_component and arr[2]=z_component
     max_degree (int): maximum degree of spherical harmonics to be used for expansion

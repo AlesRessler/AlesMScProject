@@ -159,7 +159,7 @@ def generate_random_unit_vector(dimension, generator):
     np.array(dimension x 1): random unit vector
     """
 
-    random_vector = generator.uniform(low=-1.0, high=1.0, size=dimension)
+    random_vector = generator.normal(loc=0.0, scale=1.0, size=dimension)
     random_unit_vector = random_vector / norm(random_vector)
 
     return random_unit_vector
