@@ -168,7 +168,8 @@ def generate_random_unit_vector(dimension, generator):
 
 def load_dt_simulated_multiple_populations(number_of_data_points=90, b_value=1000, b_0_signal=3000, include_b_0=False,
                                            noise_standard_deviation=100, eigenvalues=[(1, 0, 0), (0, 1, 0)],
-                                           eigenvectors=[None, None], fractions=[0.5, 0.5], noise_type='rician', noise_generator_seed=1,
+                                           eigenvectors=[None, None], fractions=[0.5, 0.5], noise_type='rician',
+                                           noise_generator_seed=1,
                                            gradient_generator_seed=1):
     """
     Returns dataset simulated from the diffusion tensor model with specified number of data points, noise standard deviation and multiple fibre populations.
@@ -228,20 +229,39 @@ def load_dt_simulated_multiple_populations(number_of_data_points=90, b_value=100
     # Add noise
     if (noise_type == 'gaussian'):
         measurements = np.array([simulation_noise.add_gaussian_noise(measurement=measurement,
-                                                                noise_standard_deviation=noise_standard_deviation,
-                                                                generator=noise_generator) for measurement in measurements])
+                                                                     noise_standard_deviation=noise_standard_deviation,
+                                                                     generator=noise_generator) for measurement in
+                                 measurements])
     elif (noise_type == 'rician'):
         measurements = np.array([simulation_noise.add_rician_noise(measurement=measurement,
-                                                              noise_standard_deviation=noise_standard_deviation,
-                                                              generator=noise_generator) for measurement in measurements])
+                                                                   noise_standard_deviation=noise_standard_deviation,
+                                                                   generator=noise_generator) for measurement in
+                                 measurements])
     elif (noise_type == 'none'):
         measurements = measurements
 
     return (bvals, qhat, measurements)
 
-def load_dt_simulated_dataset(dataset_size=1000, number_of_fibre_populations=2, max_degree=8):
 
+def load_dt_simulated_dataset(dataset_size=1000, number_of_fibre_populations=2, max_degree=8, seed=1):
     fODF_expansion_coefficients = []
+    fibre_orientations = []
+    diffusion_weighted_data = []
+
+    generator = np.random.default_rng(seed)
 
     for i in range(dataset_size):
-        load_fodf_simulated()
+        fibre_orientations.append([])
+        for j in range(number_of_fibre_populations):
+            random_vector = generate_random_unit_vector(dimension=3, generator=generator)
+            fibre_orientations[i].append(random_vector)
+
+    fibre_orientations = np.array(fibre_orientations)
+
+    for i in range(dataset_size):
+        fODF_expansion_coefficients_temp = load_fodf_simulated(max_degree=max_degree,
+                                                               fibre_orientations=fibre_orientations[i])
+
+        fODF_expansion_coefficients.append(fODF_expansion_coefficients_temp)
+
+
