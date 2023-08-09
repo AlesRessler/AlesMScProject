@@ -2,6 +2,7 @@ import numpy as np
 from numpy.linalg import pinv, norm
 
 from dataloader import simulation_noise
+from dataloader.load_fodf_simulated import load_fodf_simulated
 
 
 def load_dt_simulated(number_of_data_points=90, b_value=1000, b_0_signal=3000, include_b_0=False,
@@ -237,3 +238,10 @@ def load_dt_simulated_multiple_populations(number_of_data_points=90, b_value=100
         measurements = measurements
 
     return (bvals, qhat, measurements)
+
+def load_dt_simulated_dataset(dataset_size=1000, number_of_fibre_populations=2, max_degree=8):
+
+    fODF_expansion_coefficients = []
+
+    for i in range(dataset_size):
+        load_fodf_simulated()
