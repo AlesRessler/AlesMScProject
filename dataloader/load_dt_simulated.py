@@ -6,7 +6,7 @@ from dataloader import simulation_noise
 
 def load_dt_simulated(number_of_data_points=90, b_value=1000, b_0_signal=3000, include_b_0=False,
                       noise_standard_deviation=100, eigenvalues=(1, 0, 0), eigenvectors=None, noise_type='rician',
-                      seed=1):
+                      noise_generator=None, gradient_generator=None):
     """
     Returns dataset simulated from the diffusion tensor model with specified number of data points and noise standard deviation.
     
@@ -18,8 +18,9 @@ def load_dt_simulated(number_of_data_points=90, b_value=1000, b_0_signal=3000, i
     noise_standard_deviation (int): standard deviation of the noise component
     eigenvalues (3-tuple): eigenvalues of the eigenvectors of the diffusion tensor
     eigenvectors (np.array(3x3)): eigenvectors (column vectors) of the diffusion tensor, if None then vectors (1,0,0),(0,1,0),(0,0,1) are used
-    noise_type (string): type of noise to be added to the measurements. Supported noise types: gaussian, rician
-    seed (int): random generator seed
+    noise_type (string): type of noise to be added to the measurements. Supported noise types: gaussian, rician, none
+    noise_generator (np.Generator): generator used to create noise (if None given then a new Generator is instantiated)
+    gradient_generator (np.Generator): generator used to create gradient directions (if None given then a new Generator with seed 1 is instantiated)
     
     Returns:
     (np.array, np.array, np.array): The first array is 1D containg the b-values, 2D array containing the gradient orientations such that the first dimension determines the gradient component i.e arr[0]=x_component, arr[1]=y_component and arr[2]=z_component, third array is 1D containing DWI signals
@@ -33,9 +34,13 @@ def load_dt_simulated(number_of_data_points=90, b_value=1000, b_0_signal=3000, i
         eigenvectors[2, 2] = 1.0
 
     diffusion_tensor = compute_diffusion_tensor(eigenvalues, eigenvectors)
-    generator = np.random.default_rng(seed)
 
-    supported_noise_types = {'gaussian', 'rician'}
+    if (noise_generator is None):
+        noise_generator = np.random.default_rng()
+    if (gradient_generator is None):
+        gradient_generator = np.random.default_rng(1)
+
+    supported_noise_types = {'gaussian', 'rician', 'none'}
 
     if (not (noise_type in supported_noise_types)):
         raise Exception('Invalid noise type')
@@ -59,16 +64,19 @@ def load_dt_simulated(number_of_data_points=90, b_value=1000, b_0_signal=3000, i
             if (noise_type == 'gaussian'):
                 noisy_measurement = simulation_noise.add_gaussian_noise(measurement=b_0_signal,
                                                                         noise_standard_deviation=noise_standard_deviation,
-                                                                        generator=generator)
+                                                                        generator=noise_generator)
             elif (noise_type == 'rician'):
                 noisy_measurement = simulation_noise.add_rician_noise(measurement=b_0_signal,
                                                                       noise_standard_deviation=noise_standard_deviation,
-                                                                      generator=generator)
+                                                                      generator=noise_generator)
+            elif (noise_type == 'none'):
+                noisy_measurement = b_0_signal
+
             measurements.append(noisy_measurement)
         else:
             bvals.append(b_value)
 
-            random_unit_vector = generate_random_unit_vector(3, generator)
+            random_unit_vector = generate_random_unit_vector(3, gradient_generator)
 
             qhat[0].append(random_unit_vector[0])
             qhat[1].append(random_unit_vector[1])
@@ -81,11 +89,14 @@ def load_dt_simulated(number_of_data_points=90, b_value=1000, b_0_signal=3000, i
             if (noise_type == 'gaussian'):
                 noisy_measurement = simulation_noise.add_gaussian_noise(measurement=measurement,
                                                                         noise_standard_deviation=noise_standard_deviation,
-                                                                        generator=generator)
+                                                                        generator=noise_generator)
             elif (noise_type == 'rician'):
                 noisy_measurement = simulation_noise.add_rician_noise(measurement=measurement,
                                                                       noise_standard_deviation=noise_standard_deviation,
-                                                                      generator=generator)
+                                                                      generator=noise_generator)
+            elif (noise_type == 'none'):
+                noisy_measurement = measurement
+
             measurements.append(noisy_measurement)
 
     bvals = np.array(bvals)
@@ -156,7 +167,8 @@ def generate_random_unit_vector(dimension, generator):
 
 def load_dt_simulated_multiple_populations(number_of_data_points=90, b_value=1000, b_0_signal=3000, include_b_0=False,
                                            noise_standard_deviation=100, eigenvalues=[(1, 0, 0), (0, 1, 0)],
-                                           eigenvectors=[None, None], fractions=[0.5, 0.5], seed=1):
+                                           eigenvectors=[None, None], fractions=[0.5, 0.5], noise_type='rician', noise_generator=None,
+                                           gradient_generator=None):
     """
     Returns dataset simulated from the diffusion tensor model with specified number of data points, noise standard deviation and multiple fibre populations.
     
@@ -169,23 +181,38 @@ def load_dt_simulated_multiple_populations(number_of_data_points=90, b_value=100
     eigenvalues [(3-tuple)]: eigenvalues of the eigenvectors of the diffusion tensors (one 3-tuple for each fibre population)
     eigenvectors [(np.array(3x3))]: eigenvectors (column vectors) of the diffusion tensor, if None then vectors (1,0,0),(0,1,0),(0,0,1) are used (one 3x3 matrix for each fibre population)
     fractions [int]: volume fractions of each fibre population
-    seed (int): random generator seed
+    noise_type (string): type of noise to be added to the measurements. Supported noise types: gaussian, rician, none
+    noise_generator (np.Generator): generator used to create noise (if None given then a new Generator is instantiated)
+    gradient_generator (np.Generator): generator used to create gradient directions (if None given then a new Generator with seed 1 is instantiated)
     
     Returns:
     (np.array, np.array, np.array): The first array is 1D containg the b-values, 2D array containing the gradient orientations such that the first dimension determines the gradient component i.e arr[0]=x_component, arr[1]=y_component and arr[2]=z_component, third array is 1D containing DWI signals
     """
+
+    if (noise_generator is None):
+        noise_generator = np.random.default_rng()
+    if (gradient_generator is None):
+        gradient_generator = np.random.default_rng(1)
+
+    supported_noise_types = {'gaussian', 'rician', 'none'}
+
+    if (not (noise_type in supported_noise_types)):
+        raise Exception('Invalid noise type')
 
     bvals = None
     qhat = None
     measurements = np.zeros(number_of_data_points)
 
     for i in range(len(eigenvalues)):
+        # Simulate measurements without noise
         bvals_temp, qhat_temp, measurements_temp = load_dt_simulated(number_of_data_points=number_of_data_points,
                                                                      b_value=b_value, b_0_signal=b_0_signal,
                                                                      include_b_0=include_b_0,
                                                                      noise_standard_deviation=noise_standard_deviation,
                                                                      eigenvalues=eigenvalues[i],
-                                                                     eigenvectors=eigenvectors[i], seed=seed)
+                                                                     eigenvectors=eigenvectors[i], noise_type='none',
+                                                                     noise_generator=noise_generator,
+                                                                     gradient_generator=gradient_generator)
 
         if (i == 0):
             bvals = bvals_temp
@@ -195,5 +222,17 @@ def load_dt_simulated_multiple_populations(number_of_data_points=90, b_value=100
         measurements_temp = measurements_temp * fractions[i]
 
         measurements = measurements + measurements_temp
+
+    # Add noise
+    if (noise_type == 'gaussian'):
+        measurements = np.array([simulation_noise.add_gaussian_noise(measurement=measurement,
+                                                                noise_standard_deviation=noise_standard_deviation,
+                                                                generator=noise_generator) for measurement in measurements])
+    elif (noise_type == 'rician'):
+        measurements = np.array([simulation_noise.add_rician_noise(measurement=measurement,
+                                                              noise_standard_deviation=noise_standard_deviation,
+                                                              generator=noise_generator) for measurement in measurements])
+    elif (noise_type == 'none'):
+        measurements = measurements
 
     return (bvals, qhat, measurements)
