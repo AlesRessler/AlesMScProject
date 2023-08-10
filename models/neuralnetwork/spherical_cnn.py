@@ -40,6 +40,22 @@ class SphericalConvolution(nn.Module):
         output = torch.zeros(batch_size, self.out_channels, num_points, dtype=input.dtype, device=input.device)
 
 
+class SimpleSphericalCNN(nn.Module):
+    def __init__(self, num_classes, max_l):
+        super(SimpleSphericalCNN, self).__init__()
+        self.spherical_conv1 = SphericalConvolution(in_channels=3, out_channels=16, max_l=max_l)
+        self.spherical_conv2 = SphericalConvolution(in_channels=16, out_channels=32, max_l=max_l)
+        self.fc1 = nn.Linear(32 * ((max_l + 1) ** 2), 128)
+        self.fc2 = nn.Linear(128, num_classes)
+
+    def forward(self, input):
+        x = F.relu(self.spherical_conv1(input))
+        x = F.relu(self.spherical_conv2(x))
+        x = x.view(x.size(0), -1)  # Flatten the feature maps
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
+
 class SCNNModel(torch.nn.Module):
     def __init__(self, n_in, n_out, l_max):
         super().__init__()
