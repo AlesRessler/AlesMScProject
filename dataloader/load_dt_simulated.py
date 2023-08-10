@@ -3,6 +3,7 @@ from numpy.linalg import pinv, norm
 
 from dataloader import simulation_noise
 from dataloader.load_fodf_simulated import load_fodf_simulated
+#from models.sphericaldeconvolution.fibre_response_function import gram_schmidt_orthonormalization
 
 
 def load_dt_simulated(number_of_data_points=90, b_value=1000, b_0_signal=3000, include_b_0=False,
@@ -243,20 +244,23 @@ def load_dt_simulated_multiple_populations(number_of_data_points=90, b_value=100
     return (bvals, qhat, measurements)
 
 
-def load_dt_simulated_dataset(dataset_size=1000, number_of_fibre_populations=2, max_degree=8, seed=1):
+def load_dt_simulated_dataset(dataset_size=1000, number_of_fibre_populations=2, max_degree=8, vary_gradients=False,
+                              seed=1):
     fODF_expansion_coefficients = []
     fibre_orientations = []
     diffusion_weighted_data = []
+    eigenvectors = []
 
     generator = np.random.default_rng(seed)
 
     for i in range(dataset_size):
         fibre_orientations.append([])
         for j in range(number_of_fibre_populations):
-            random_vector = generate_random_unit_vector(dimension=3, generator=generator)
-            fibre_orientations[i].append(random_vector)
+            random_direction = generate_random_unit_vector(dimension=3,generator=generator)
+            fibre_orientations[i].append(random_direction)
+        fibre_orientations[i] = np.array(fibre_orientations[i])
 
-    fibre_orientations = np.array(fibre_orientations)
+    #fibre_orientations = np.array(fibre_orientations)
 
     for i in range(dataset_size):
         fODF_expansion_coefficients_temp = load_fodf_simulated(max_degree=max_degree,
@@ -264,4 +268,72 @@ def load_dt_simulated_dataset(dataset_size=1000, number_of_fibre_populations=2, 
 
         fODF_expansion_coefficients.append(fODF_expansion_coefficients_temp)
 
+    fODF_expansion_coefficients = np.array(fODF_expansion_coefficients)
 
+    eigenvalues = []
+
+    for i in range(number_of_fibre_populations):
+        eigenvalues.append((0.003, 0.0002, 0.0002))
+
+    for i in range(dataset_size):
+        eigenvectors.append([])
+        for j in range(number_of_fibre_populations):
+            eigenvectors[i].append(gram_schmidt_orthonormalization(fibre_orientations[i][j]))
+
+
+    for i in range(dataset_size):
+        fractions = np.random.rand(number_of_fibre_populations)
+        fractions = fractions/np.sum(fractions)
+        fractions = fractions.tolist()
+
+        diffusion_weighted_data_temp = load_dt_simulated_multiple_populations(number_of_data_points=90, b_value=1000,
+                                                                              b_0_signal=3000, include_b_0=False,
+                                                                              noise_standard_deviation=100,
+                                                                              eigenvalues=eigenvalues,
+                                                                              eigenvectors=eigenvectors[i],
+                                                                              fractions=fractions, noise_type='rician',
+                                                                              noise_generator_seed=i,
+                                                                              gradient_generator_seed=1)
+
+        diffusion_weighted_data.append(diffusion_weighted_data_temp)
+
+    #diffusion_weighted_data = np.array(diffusion_weighted_data)
+
+    fibre_orientations = np.array(fibre_orientations)
+
+    return (fODF_expansion_coefficients, diffusion_weighted_data, fibre_orientations)
+
+def generate_random_eigenvectors(generator):
+    eigenvectors = np.zeros((3,3))
+
+    for i in range(3):
+        eigenvectors[:,i] = generate_random_unit_vector(dimension=3, generator=generator)
+
+    return eigenvectors
+
+def gram_schmidt_orthonormalization(vector):
+    """
+    Computes a 3D orthonormal basis given one 3D vector.
+
+    Parameters:
+    vector (np.array(1x3)): 3D vector
+
+    Returns:
+    (np.array(3x3)) 3D orthonormal basis with basis vectors as columns
+    """
+    vector1 = vector / np.linalg.norm(vector)
+
+    vector2 = None
+    while (True):
+        vector2 = np.random.rand(3)
+        vector2 /= np.linalg.norm(vector2)
+
+        if (not np.array_equal(vector1, vector2)):
+            break
+
+    vector2 -= np.dot(vector2, vector1) * vector1
+    vector2 /= np.linalg.norm(vector2)
+
+    vector3 = np.cross(vector1, vector2)
+
+    return np.array([vector1, vector2, vector3]).T
