@@ -18,7 +18,7 @@ def load_fodf_simulated(max_degree, fibre_orientations=None):
     """
 
     if (fibre_orientations is None):
-        fibre_orientations = np.array([[1, 0, 0], [0, 1, 0],[0.80178373, 0.26726124, 0.53452248]])
+        fibre_orientations = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
 
     thetas, phis = convert_coords_from_cartesian_to_spherical(fibre_orientations.T)
 
@@ -29,8 +29,9 @@ def load_fodf_simulated(max_degree, fibre_orientations=None):
         for l in range(0, max_degree + 1, 2):
             for m in range(-l, l + 1):
                 spherical_harmonics_coefficients[
-                    get_storage_index(l, m)] += np.sin(thetas[i]) * real_and_antipodal_spherical_harmonic_basis(l,
-                                                                                                            m,
-                                                                                                            thetas[i],
-                                                                                                            phis[i])
+                    get_storage_index(l, m)] += real_and_antipodal_spherical_harmonic_basis(l,
+                                                                                            m,
+                                                                                            thetas[
+                                                                                                i],
+                                                                                            phis[i])
     return spherical_harmonics_coefficients
