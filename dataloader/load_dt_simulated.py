@@ -3,7 +3,9 @@ from numpy.linalg import pinv, norm
 
 from dataloader import simulation_noise
 from dataloader.load_fodf_simulated import load_fodf_simulated
-#from models.sphericaldeconvolution.fibre_response_function import gram_schmidt_orthonormalization
+
+
+# from models.sphericaldeconvolution.fibre_response_function import gram_schmidt_orthonormalization
 
 
 def load_dt_simulated(number_of_data_points=90, b_value=1000, b_0_signal=3000, include_b_0=False,
@@ -245,71 +247,86 @@ def load_dt_simulated_multiple_populations(number_of_data_points=90, b_value=100
 
 
 def load_dt_simulated_dataset(dataset_size=1000, number_of_fibre_populations=2, max_degree=8, vary_gradients=False,
+                              fibre_population_eigenvalues=None,
                               seed=1):
+    """
+    Parameters:
+    dataset_size (int): number of datapoints to be generated
+    number_of_fibre_populations (int): number of fibre populations in one voxel
+    max_degree (int): maximum degree of spherical harmonics to be used to represent fODF
+    vary_gradients (bool): whether gradients should be different for each sample
+    fibre_population_eigenvalues (3-tuple of numbers): eigenvalues characterising diffusion tensor of single fibre population (if None given then (0.003, 0.0002, 0.0002) is used)
+    seed (int): rng seed for fibre orientation generation and gradient generation
+
+    Returns:
+    (np.array(n x number_of_coefficients), list_of_diffusion_weighted_data, np.array(nx3)): first object is an array of SH coefficients for each simulated fODF, second object is a list of diffusion-weighted data as defined in load_dt_simulated_multiple_populations function, third object contains row vectors of fibre orientations
+    """
+
     fODF_expansion_coefficients = []
     fibre_orientations = []
     diffusion_weighted_data = []
     eigenvectors = []
+    volume_fractions = []
 
     generator = np.random.default_rng(seed)
 
+    # Generate random fibre orientations and volume fractions
     for i in range(dataset_size):
         fibre_orientations.append([])
+
         for j in range(number_of_fibre_populations):
-            random_direction = generate_random_unit_vector(dimension=3,generator=generator)
+            random_direction = generate_random_unit_vector(dimension=3, generator=generator)
             fibre_orientations[i].append(random_direction)
+
+        fractions = generator.uniform(low=0.05, high=1, size=number_of_fibre_populations)
+        fractions = fractions / np.sum(fractions)
+        fractions = fractions.tolist()
+        volume_fractions.append(fractions)
+
         fibre_orientations[i] = np.array(fibre_orientations[i])
 
-    #fibre_orientations = np.array(fibre_orientations)
-
+    # Generate SH expansion coefficients of the fODFs from fibre orientations
     for i in range(dataset_size):
         fODF_expansion_coefficients_temp = load_fodf_simulated(max_degree=max_degree,
-                                                               fibre_orientations=fibre_orientations[i])
-
+                                                               fibre_orientations=fibre_orientations[i],
+                                                               fibre_fractions=volume_fractions[i])
         fODF_expansion_coefficients.append(fODF_expansion_coefficients_temp)
 
     fODF_expansion_coefficients = np.array(fODF_expansion_coefficients)
 
     eigenvalues = []
 
+    # Set the diffusion tensor eigenvalues for each fibre population
     for i in range(number_of_fibre_populations):
-        eigenvalues.append((0.003, 0.0002, 0.0002))
+        if (fibre_population_eigenvalues is None):
+            eigenvalues.append((0.003, 0.0002, 0.0002))
+        else:
+            eigenvalues.append(fibre_population_eigenvalues)
 
+    # Generate diffusion tensor eigenvectors from fibre orientations
     for i in range(dataset_size):
         eigenvectors.append([])
         for j in range(number_of_fibre_populations):
             eigenvectors[i].append(gram_schmidt_orthonormalization(fibre_orientations[i][j]))
 
-
+    # Simulate diffusion-weighted signals using the diffusion tensor model
     for i in range(dataset_size):
-        fractions = np.random.rand(number_of_fibre_populations)
-        fractions = fractions/np.sum(fractions)
-        fractions = fractions.tolist()
-
         diffusion_weighted_data_temp = load_dt_simulated_multiple_populations(number_of_data_points=90, b_value=1000,
                                                                               b_0_signal=3000, include_b_0=False,
                                                                               noise_standard_deviation=100,
                                                                               eigenvalues=eigenvalues,
                                                                               eigenvectors=eigenvectors[i],
-                                                                              fractions=fractions, noise_type='rician',
+                                                                              fractions=volume_fractions[i],
+                                                                              noise_type='rician',
                                                                               noise_generator_seed=i,
-                                                                              gradient_generator_seed=1)
+                                                                              gradient_generator_seed=seed)
 
         diffusion_weighted_data.append(diffusion_weighted_data_temp)
-
-    #diffusion_weighted_data = np.array(diffusion_weighted_data)
 
     fibre_orientations = np.array(fibre_orientations)
 
     return (fODF_expansion_coefficients, diffusion_weighted_data, fibre_orientations)
 
-def generate_random_eigenvectors(generator):
-    eigenvectors = np.zeros((3,3))
-
-    for i in range(3):
-        eigenvectors[:,i] = generate_random_unit_vector(dimension=3, generator=generator)
-
-    return eigenvectors
 
 def gram_schmidt_orthonormalization(vector):
     """
