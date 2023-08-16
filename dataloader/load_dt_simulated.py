@@ -268,7 +268,7 @@ def load_dt_simulated_dataset(dataset_size=1000, number_of_fibre_populations=2, 
     eigenvectors = []
     volume_fractions = []
 
-    generator = np.random.default_rng(seed)
+    generator = np.random.default_rng(seed + number_of_fibre_populations)
 
     # Generate random fibre orientations and volume fractions
     for i in range(dataset_size):
@@ -318,7 +318,7 @@ def load_dt_simulated_dataset(dataset_size=1000, number_of_fibre_populations=2, 
                                                                               eigenvectors=eigenvectors[i],
                                                                               fractions=volume_fractions[i],
                                                                               noise_type='rician',
-                                                                              noise_generator_seed=i,
+                                                                              noise_generator_seed=i*number_of_fibre_populations,
                                                                               gradient_generator_seed=seed)
 
         diffusion_weighted_data.append(diffusion_weighted_data_temp)
@@ -354,3 +354,26 @@ def gram_schmidt_orthonormalization(vector):
     vector3 = np.cross(vector1, vector2)
 
     return np.array([vector1, vector2, vector3]).T
+
+
+def save_dt_simulated_dataset(dataset, path):
+    np.save(path + "/fODF_sh_coefficients", dataset[0])
+
+    b_values = []
+    gradient_orientations = []
+    diffusion_weighted_signals = []
+
+    for element in dataset[1]:
+        b_values.append(element[0])
+        gradient_orientations.append(element[1])
+        diffusion_weighted_signals.append(element[2])
+
+    b_values = np.array(b_values)
+    gradient_orientations = np.array(gradient_orientations)
+    diffusion_weighted_signals = np.array(diffusion_weighted_signals)
+
+    np.save(path + "/b_values", b_values)
+    np.save(path + "/gradient_orientations", gradient_orientations)
+    np.save(path + "/diffusion_weighted_signals", diffusion_weighted_signals)
+
+    np.save(path + "/fibre_orientations", dataset[2])
