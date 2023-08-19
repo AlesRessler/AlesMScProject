@@ -31,7 +31,7 @@ def diffusion_tensor_response_function(b_vector, fibre_orientations, b_value,
 
         diffusion_tensor = compute_diffusion_tensor(eigenvalues=diffusion_tensor_eigenvalues, eigenvectors=eigenvectors)
 
-        response = simulate_signal(b_value=b_value, gradient=gradient_orientation, b_0_signal=1,
+        response = simulate_signal(b_value=b_value, gradient=gradient_orientation, b_0_signal=3000,
                                    diffusion_tensor=diffusion_tensor)
         responses.append(response)
 
