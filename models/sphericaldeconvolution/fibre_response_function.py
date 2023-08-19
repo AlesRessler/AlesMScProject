@@ -1,6 +1,7 @@
 import numpy as np
 
 from dataloader.load_dt_simulated import compute_diffusion_tensor, simulate_signal
+from mathematics.gram_schmidt_orthonormalization import gram_schmidt_orthonormalization
 
 
 def simple_fibre_response_function(b_vector, fibre_orientations, diffusion_time, diffusivity):
@@ -36,31 +37,3 @@ def diffusion_tensor_response_function(b_vector, fibre_orientations, b_value,
         responses.append(response)
 
     return responses
-
-
-def gram_schmidt_orthonormalization(vector):
-    """
-    Computes a 3D orthonormal basis given one 3D vector.
-
-    Parameters:
-    vector (np.array(1x3)): 3D vector
-
-    Returns:
-    (np.array(3x3)) 3D orthonormal basis with basis vectors as columns
-    """
-    vector1 = vector / np.linalg.norm(vector)
-
-    vector2 = None
-    while (True):
-        vector2 = np.random.rand(3)
-        vector2 /= np.linalg.norm(vector2)
-
-        if (not np.array_equal(vector1, vector2)):
-            break
-
-    vector2 -= np.dot(vector2, vector1) * vector1
-    vector2 /= np.linalg.norm(vector2)
-
-    vector3 = np.cross(vector1, vector2)
-
-    return np.array([vector1, vector2, vector3]).T

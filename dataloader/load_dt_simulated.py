@@ -6,9 +6,6 @@ from dataloader.load_fodf_simulated import load_fodf_simulated
 from mathematics.gram_schmidt_orthonormalization import gram_schmidt_orthonormalization
 
 
-# from models.sphericaldeconvolution.fibre_response_function import gram_schmidt_orthonormalization
-
-
 def load_dt_simulated(number_of_data_points=90, b_value=1000, b_0_signal=3000, include_b_0=False,
                       signal_to_noise_ratio=30, eigenvalues=(1, 0, 0), eigenvectors=None, noise_type='rician',
                       noise_generator=None, gradient_generator=None):
