@@ -22,7 +22,7 @@ def simple_fibre_response_function(b_vector, fibre_orientations, diffusion_time,
 
 
 def diffusion_tensor_response_function(b_vector, fibre_orientations, b_value,
-                                       diffusion_tensor_eigenvalues=(0.003, 0.0002, 0.0002)):
+                                       diffusion_tensor_eigenvalues=(0.003, 0.0002, 0.0002), b_0_signal=3000):
     responses = []
 
     gradient_orientation = b_vector / np.linalg.norm(b_vector)
@@ -32,7 +32,7 @@ def diffusion_tensor_response_function(b_vector, fibre_orientations, b_value,
 
         diffusion_tensor = compute_diffusion_tensor(eigenvalues=diffusion_tensor_eigenvalues, eigenvectors=eigenvectors)
 
-        response = simulate_signal(b_value=b_value, gradient=gradient_orientation, b_0_signal=3000,
+        response = simulate_signal(b_value=b_value, gradient=gradient_orientation, b_0_signal=b_0_signal,
                                    diffusion_tensor=diffusion_tensor)
         responses.append(response)
 
