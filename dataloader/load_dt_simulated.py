@@ -1,12 +1,9 @@
-import os
-
 import numpy as np
 from numpy.linalg import pinv, norm
 
 from dataloader import simulation_noise
 from dataloader.load_fodf_simulated import load_fodf_simulated
 from mathematics.gram_schmidt_orthonormalization import gram_schmidt_orthonormalization
-from utils.file_operations import silent_delete
 
 
 def load_dt_simulated(number_of_data_points=90, b_value=1000, b_0_signal=3000, include_b_0=False,
@@ -249,7 +246,7 @@ def load_dt_simulated_dataset(dataset_size=1000, number_of_fibre_populations=2, 
                               signal_to_noise_ratio=30, noise_type='rician',
                               noise_generator_seed=1,
                               gradient_generator_seed=1,
-                              fibre_orientation_generator_seed=1):
+                              fibre_orientation_generator_seed=1, no_rotation=False):
     """
     Parameters:
     dataset_size (int): number of datapoints to be generated
@@ -283,7 +280,13 @@ def load_dt_simulated_dataset(dataset_size=1000, number_of_fibre_populations=2, 
         fibre_orientations.append([])
 
         for j in range(number_of_fibre_populations):
-            random_direction = generate_random_unit_vector(dimension=3, generator=fibre_orientation_generator)
+            random_direction = None
+
+            if(no_rotation):
+                pass
+            else:
+                random_direction = generate_random_unit_vector(dimension=3, generator=fibre_orientation_generator)
+
             fibre_orientations[i].append(random_direction)
 
         fractions = fibre_orientation_generator.uniform(low=0.05, high=1, size=number_of_fibre_populations)
