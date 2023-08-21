@@ -4,6 +4,7 @@ from numpy.linalg import pinv, norm
 from dataloader import simulation_noise
 from dataloader.load_fodf_simulated import load_fodf_simulated
 from mathematics.gram_schmidt_orthonormalization import gram_schmidt_orthonormalization
+from mathematics.vector_rotation import yaw_pitch_roll_matrix
 
 
 def load_dt_simulated(number_of_data_points=90, b_value=1000, b_0_signal=3000, include_b_0=False,
@@ -246,7 +247,7 @@ def load_dt_simulated_dataset(dataset_size=1000, number_of_fibre_populations=2, 
                               signal_to_noise_ratio=30, noise_type='rician',
                               noise_generator_seed=1,
                               gradient_generator_seed=1,
-                              fibre_orientation_generator_seed=1, no_rotation=False):
+                              fibre_orientation_generator_seed=1, planar=False):
     """
     Parameters:
     dataset_size (int): number of datapoints to be generated
@@ -262,6 +263,7 @@ def load_dt_simulated_dataset(dataset_size=1000, number_of_fibre_populations=2, 
     noise_generator_seed (int): generator seed used to create noise (if None given then a new Generator is instantiated)
     gradient_generator_seed (int): generator seed used to create gradient directions (if None given then a new Generator with seed 1 is instantiated)
     fibre_orientation_generator_seed (int): generator seed used to generate fibre orientations
+    planar (bool): determines whether fibre orientations should be rotated in 3D. If true then 2 fibre populations will by parallel to the XY-plane and if a third population is present it will be parallel to the Z-axis. Only the angles in the XY-plane change.
 
     Returns:
     (np.array(n x number_of_coefficients), list_of_diffusion_weighted_data, np.array(nx3)): first object is an array of SH coefficients for each simulated fODF, second object is a list of diffusion-weighted data as defined in load_dt_simulated_multiple_populations function, third object contains row vectors of fibre orientations
@@ -282,8 +284,17 @@ def load_dt_simulated_dataset(dataset_size=1000, number_of_fibre_populations=2, 
         for j in range(number_of_fibre_populations):
             random_direction = None
 
-            if(no_rotation):
-                pass
+            if (planar):
+                if (j == 0):
+                    random_direction = generate_random_unit_vector(dimension=3, generator=fibre_orientation_generator)
+                    random_direction[2] = 0.0
+                    random_direction /= np.linalg.norm(random_direction)
+                elif (j == 1):
+                    random_direction = generate_random_unit_vector(dimension=3, generator=fibre_orientation_generator)
+                    random_direction[2] = 0.0
+                    random_direction /= np.linalg.norm(random_direction)
+                elif (j == 2):
+                    random_direction = np.array([0.0, 0.0, 1.0])
             else:
                 random_direction = generate_random_unit_vector(dimension=3, generator=fibre_orientation_generator)
 
@@ -341,7 +352,6 @@ def load_dt_simulated_dataset(dataset_size=1000, number_of_fibre_populations=2, 
 
 
 def save_dt_simulated_dataset(dataset, path):
-
     np.save(path + "/fODF_sh_coefficients", dataset[0])
 
     b_values = []
@@ -362,3 +372,80 @@ def save_dt_simulated_dataset(dataset, path):
     np.save(path + "/diffusion_weighted_signals", diffusion_weighted_signals)
 
     np.save(path + "/fibre_orientations", dataset[2])
+
+
+def rotate_dt_simulated_dataset(fibre_orientations, number_of_fibre_populations=2, max_degree=8,
+                                fibre_population_eigenvalues=None, number_of_data_points=90, b_value=1000,
+                                b_0_signal=3000, include_b_0=False,
+                                signal_to_noise_ratio=30, noise_type='rician',
+                                noise_generator_seed=1,
+                                gradient_generator_seed=1,
+                                fibre_orientation_generator_seed=1):
+    fODF_expansion_coefficients = []
+    diffusion_weighted_data = []
+    eigenvectors = []
+    volume_fractions = []
+    rotated_fibre_orientations = []
+
+    dataset_size = len(fibre_orientations)
+
+    fibre_orientation_generator = np.random.default_rng(fibre_orientation_generator_seed)
+
+    # Generate random rotations and volume fractions
+    for i in range(dataset_size):
+        rotation_angles = fibre_orientation_generator.uniform(low=0.0, high=2 * np.pi, size=3)
+        yaw_pitch_roll = yaw_pitch_roll_matrix(alpha=rotation_angles[0], beta=rotation_angles[1], gamma=rotation_angles[2])
+        rotated_fibre_orientations.append([])
+
+        for j in range(number_of_fibre_populations):
+            rotated_fibre_orientations[i].append(yaw_pitch_roll @ fibre_orientations[i][j])
+
+        rotated_fibre_orientations[i] = np.array(rotated_fibre_orientations[i])
+
+        fractions = fibre_orientation_generator.uniform(low=0.05, high=1, size=number_of_fibre_populations)
+        fractions = fractions / np.sum(fractions)
+        fractions = fractions.tolist()
+        volume_fractions.append(fractions)
+
+    # Generate SH expansion coefficients of the fODFs from fibre orientations
+    for i in range(dataset_size):
+        fODF_expansion_coefficients_temp = load_fodf_simulated(max_degree=max_degree,
+                                                               fibre_orientations=rotated_fibre_orientations[i],
+                                                               fibre_fractions=volume_fractions[i])
+        fODF_expansion_coefficients.append(fODF_expansion_coefficients_temp)
+
+    fODF_expansion_coefficients = np.array(fODF_expansion_coefficients)
+
+    eigenvalues = []
+
+    # Set the diffusion tensor eigenvalues for each fibre population
+    for i in range(number_of_fibre_populations):
+        if (fibre_population_eigenvalues is None):
+            eigenvalues.append((0.003, 0.0002, 0.0002))
+        else:
+            eigenvalues.append(fibre_population_eigenvalues)
+
+    # Generate diffusion tensor eigenvectors from fibre orientations
+    for i in range(dataset_size):
+        eigenvectors.append([])
+        for j in range(number_of_fibre_populations):
+            eigenvectors[i].append(gram_schmidt_orthonormalization(rotated_fibre_orientations[i][j]))
+
+    # Simulate diffusion-weighted signals using the diffusion tensor model
+    for i in range(dataset_size):
+        diffusion_weighted_data_temp = load_dt_simulated_multiple_populations(
+            number_of_data_points=number_of_data_points, b_value=b_value,
+            b_0_signal=b_0_signal, include_b_0=include_b_0,
+            signal_to_noise_ratio=signal_to_noise_ratio,
+            eigenvalues=eigenvalues,
+            eigenvectors=eigenvectors[i],
+            fractions=volume_fractions[i],
+            noise_type=noise_type,
+            noise_generator_seed=noise_generator_seed + i,
+            gradient_generator_seed=gradient_generator_seed)
+
+        diffusion_weighted_data.append(diffusion_weighted_data_temp)
+
+    rotated_fibre_orientations = np.array(rotated_fibre_orientations)
+
+    return (fODF_expansion_coefficients, diffusion_weighted_data, rotated_fibre_orientations)
