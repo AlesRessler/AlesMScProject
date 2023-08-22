@@ -3,41 +3,33 @@ import torch.nn as nn
 import torch.nn.functional as F
 from scipy.special import sph_harm
 
-class SphericalConvolution(nn.Module):
-    def __init__(self, in_channels, out_channels, max_l):
-        super(SphericalConvolution, self).__init__()
-        self.in_channels = in_channels
-        self.out_channels = out_channels
-        self.max_l = max_l  # Maximum l value for spherical harmonics
-        self.coefficients = nn.Parameter(torch.randn(out_channels, in_channels, (max_l + 1) ** 2))
-        self.bias = nn.Parameter(torch.zeros(out_channels))
+class SphericalConvolution(torch.nn.Module):
+    def __init__(self, l_max, c_in, c_out):
+        super().__init__()
+        self.l_max = l_max
+        self.c_in = c_in
+        self.c_out = c_out
+        ls = torch.zeros(n_coeffs, dtype=int)
+        for l in range(0, l_max + 1, 2):
+            for m in range(-l, l + 1):
+                ls[int(0.5 * l * (l + 1) + m)] = l
+        self.register_buffer("ls", ls)
+        self.weights = torch.nn.Parameter(
+            torch.Tensor(self.c_out, self.c_in, int(self.l_max / 2) + 1)
+        )
+        torch.nn.init.uniform_(self.weights)
 
-    def forward(self, input):
-        batch_size, in_channels, num_points = input.size()
-
-        # Calculate spherical harmonics coefficients for input data
-        input_sph_coeffs = []
-        for i in range(batch_size):
-            input_sph_coeffs.append([])
-            for j in range(in_channels):
-                input_sph_coeffs[i].append([])
-                for l in range(self.max_l + 1):
-                    for m in range(-l, l + 1):
-                        input_sph_coeffs[i][j].append(torch.sum(
-                            input[i, j] * torch.tensor(sph_harm(m, l, 0, 0), dtype=input.dtype, device=input.device)
-                        ))
-
-        input_sph_coeffs = torch.stack(
-            [torch.stack([torch.cat(channel) for channel in sample]) for sample in input_sph_coeffs])
-
-        # Calculate spherical harmonics coefficients for convolution kernel
-        kernel_sph_coeffs = self.coefficients
-
-        # Perform convolution in spherical harmonics domain
-        output_sph_coeffs = torch.einsum('bilm,bijm->bjlm', kernel_sph_coeffs, input_sph_coeffs)
-
-        # Convert spherical harmonics coefficients back to spatial domain
-        output = torch.zeros(batch_size, self.out_channels, num_points, dtype=input.dtype, device=input.device)
+    def forward(self, x):
+        weights_exp = self.weights[:, :, (self.ls / 2).long()]
+        ys = torch.sum(
+            torch.sqrt(
+                math.pi / (2 * self.ls.unsqueeze(0).unsqueeze(0).unsqueeze(0) + 1)
+            )
+            * weights_exp.unsqueeze(0)
+            * x.unsqueeze(1),
+            dim=2,
+        )
+        return ys
 
 
 class SimpleSphericalCNN(nn.Module):
