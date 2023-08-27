@@ -22,4 +22,5 @@ def add_rician_noise(measurement, signal_to_noise_ratio=30, generator=None):
     random_normal_number2 = generator.normal(loc=0.0, scale=noise_standard_deviation)
 
     noisy_measurement = np.sqrt((measurement + random_normal_number1)**2 + random_normal_number2**2)
+
     return noisy_measurement

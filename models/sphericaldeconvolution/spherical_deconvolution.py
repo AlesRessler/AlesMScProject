@@ -1,6 +1,7 @@
 from functools import partial
 import numpy as np
 
+from dataloader.simulation_noise import add_rician_noise
 from sampling.spherical_function_sampling import random_sampling
 from preprocessing.data_transformations import convert_coords_from_cartesian_to_spherical
 from sphericalharmonics.spherical_fourier_transform import get_spherical_harmonics_expansion_coefficients
@@ -27,6 +28,8 @@ def spherical_deconvolution_fit(fibre_response_function, measurements, qhat, b_v
         fibre_response_function_partial = partial(fibre_response_function, b_vector=qhat.T[i]*b_value)
         
         fibre_response_function_vectors, fibre_response_function_samples = random_sampling(function=fibre_response_function_partial, number_of_samples=number_of_samples_of_fibre_response_function, coordinates='cartesian', seed=1)
+
+        #fibre_response_function_samples = np.array([add_rician_noise(measurement=fibre_response_function_sample, signal_to_noise_ratio=0.01) for fibre_response_function_sample in fibre_response_function_samples])
 
         thetas, phis = convert_coords_from_cartesian_to_spherical(fibre_response_function_vectors.T)
 
