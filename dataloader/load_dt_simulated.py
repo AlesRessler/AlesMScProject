@@ -285,7 +285,7 @@ def load_dt_simulated_dataset(dataset_size=1000, number_of_fibre_populations=2, 
             random_direction = None
 
             if (planar):
-                if (j == 0):
+                if (j == 0 or j==1):
                     random_direction = generate_random_unit_vector(dimension=3, generator=fibre_orientation_generator)
                     random_direction[2] = 0.0
                     random_direction /= np.linalg.norm(random_direction)
