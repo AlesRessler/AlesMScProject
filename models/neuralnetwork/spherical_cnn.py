@@ -42,18 +42,13 @@ class SCNNModel(torch.nn.Module):
 
         number_of_sh_coefficients = get_number_of_coefficients(max_degree)
 
-        self.conv1 = SphericalConvolution(max_degree, number_of_shells, 16,number_of_sh_coefficients=number_of_sh_coefficients)
+        self.conv1 = SphericalConvolution(max_degree, number_of_shells, 16,
+                                          number_of_sh_coefficients=number_of_sh_coefficients)
         self.conv2 = SphericalConvolution(max_degree, 16, 32, number_of_sh_coefficients=number_of_sh_coefficients)
         self.conv3 = SphericalConvolution(max_degree, 32, 64, number_of_sh_coefficients=number_of_sh_coefficients)
         self.conv4 = SphericalConvolution(max_degree, 64, 32, number_of_sh_coefficients=number_of_sh_coefficients)
         self.conv5 = SphericalConvolution(max_degree, 32, 16, number_of_sh_coefficients=number_of_sh_coefficients)
         self.conv6 = SphericalConvolution(max_degree, 16, 1, number_of_sh_coefficients=number_of_sh_coefficients)
-
-        self.fc1 = torch.nn.Linear(2880, 128)
-        self.bn1 = torch.nn.BatchNorm1d(128)
-        self.fc2 = torch.nn.Linear(128, 128)
-        self.bn2 = torch.nn.BatchNorm1d(128)
-        self.fc3 = torch.nn.Linear(128, 45)
 
         self.register_buffer("sft", spherical_fourier_transform)
         self.register_buffer("isft", inverse_spherical_fourier_transform)
@@ -73,12 +68,12 @@ class SCNNModel(torch.nn.Module):
         x = self.nonlinearity(x)
         x = self.conv3(x)
         x = self.nonlinearity(x)
-        x = x.view(x.size(0), -1)
-        x = self.fc1(x)
-        x = self.bn1(x)
-        x = torch.nn.functional.relu(x)
-        x = self.fc2(x)
-        x = self.bn2(x)
-        x = torch.nn.functional.relu(x)
-        x = self.fc3(x)
+        x = self.conv4(x)
+        x = self.nonlinearity(x)
+        x = self.conv5(x)
+        x = self.nonlinearity(x)
+        x = self.conv6(x)
+        #x = self.nonlinearity(x)
+        x = torch.squeeze(x)
+        x = x[:, :45]
         return x
