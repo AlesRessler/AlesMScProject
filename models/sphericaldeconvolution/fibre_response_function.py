@@ -1,6 +1,6 @@
 import numpy as np
 
-from dataloader.load_dt_simulated import compute_diffusion_tensor, simulate_signal
+from dataloader.load_dt_simulated import compute_diffusion_tensor, simulate_signal, simulate_normalized_signal
 from mathematics.gram_schmidt_orthonormalization import gram_schmidt_orthonormalization
 
 
@@ -23,6 +23,18 @@ def simple_fibre_response_function(b_vector, fibre_orientations, diffusion_time,
 
 def diffusion_tensor_response_function(b_vector, fibre_orientations, b_value,
                                        diffusion_tensor_eigenvalues=(0.003, 0.0002, 0.0002), b_0_signal=3000):
+    """
+    Compute normalised values of fibre response function using diffusion tensor model.
+    Args:
+        b_vector:
+        fibre_orientations:
+        b_value:
+        diffusion_tensor_eigenvalues:
+        b_0_signal:
+
+    Returns: (np.array): Simulated normalised signals
+
+    """
     responses = []
 
     gradient_orientation = b_vector / np.linalg.norm(b_vector)
@@ -32,8 +44,8 @@ def diffusion_tensor_response_function(b_vector, fibre_orientations, b_value,
 
         diffusion_tensor = compute_diffusion_tensor(eigenvalues=diffusion_tensor_eigenvalues, eigenvectors=eigenvectors)
 
-        response = simulate_signal(b_value=b_value, gradient=gradient_orientation, b_0_signal=b_0_signal,
-                                   diffusion_tensor=diffusion_tensor)
+        response = simulate_normalized_signal(b_value=b_value, gradient=gradient_orientation, b_0_signal=b_0_signal,
+                                              diffusion_tensor=diffusion_tensor)
         responses.append(response)
 
     return responses

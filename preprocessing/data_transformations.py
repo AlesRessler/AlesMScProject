@@ -16,6 +16,9 @@ def convert_coords_from_cartesian_to_spherical(qhat):
 
     phis[phis < 0] += 2 * np.pi
 
+    #thetas = np.arccos(qhat[2])
+    #phis = np.arctan2(qhat[1], qhat[0]) + np.pi / 2
+
     return (thetas, phis)
 
 

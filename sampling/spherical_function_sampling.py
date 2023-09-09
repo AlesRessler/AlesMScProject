@@ -31,4 +31,3 @@ def random_sampling(function, number_of_samples, coordinates='cartesian', seed=1
         return (random_unit_vectors, values)
     else:
         raise Exception('Invalid coordinate system')
-

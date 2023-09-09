@@ -72,6 +72,7 @@ def load_dt_simulated(number_of_data_points=90, b_value=1000, b_0_signal=3000, i
             if (noise_type == 'rician'):
                 noisy_measurement = simulation_noise.add_rician_noise(measurement=b_0_signal,
                                                                       signal_to_noise_ratio=signal_to_noise_ratio,
+                                                                      b_0_signal=b_0_signal,
                                                                       generator=noise_generator)
             elif (noise_type == 'none'):
                 noisy_measurement = b_0_signal
@@ -93,6 +94,7 @@ def load_dt_simulated(number_of_data_points=90, b_value=1000, b_0_signal=3000, i
             if (noise_type == 'rician'):
                 noisy_measurement = simulation_noise.add_rician_noise(measurement=measurement,
                                                                       signal_to_noise_ratio=signal_to_noise_ratio,
+                                                                      b_0_signal=b_0_signal,
                                                                       generator=noise_generator)
             elif (noise_type == 'none'):
                 noisy_measurement = measurement
@@ -132,7 +134,7 @@ def compute_diffusion_tensor(eigenvalues, eigenvectors):
 
 def simulate_signal(b_value, gradient, b_0_signal, diffusion_tensor):
     """
-    Produce signal measurement according to the diffusion model.
+    Produce un-normalized signal measurement according to the diffusion tensor model.
     
     Parameters:
     b-value (int): non-zero b-value used in the simulation
@@ -145,6 +147,20 @@ def simulate_signal(b_value, gradient, b_0_signal, diffusion_tensor):
 
     return signal
 
+
+def simulate_normalized_signal(b_value, gradient, b_0_signal, diffusion_tensor):
+    """
+    Produce normalized signal measurement according to the diffusion tensor model.
+
+    Parameters:
+    b-value (int): non-zero b-value used in the simulation
+    gradient (np.array(3x1)): unit (column) vector of the gradient direction
+    b_0_signal (int): non-diffusion weighted signal
+    diffusion_tensor (np.array(3x3)): diffusion tensor to be used for simulation
+    """
+    signal = np.exp(-b_value * (gradient.T @ diffusion_tensor @ gradient))
+
+    return signal
 
 def generate_random_unit_vector(dimension, generator):
     """
@@ -229,10 +245,12 @@ def load_dt_simulated_multiple_populations(number_of_data_points=90, b_value=100
         # Reset RNG to produce the same gradient orientations in next iteration
         gradient_generator = np.random.default_rng(gradient_generator_seed)
 
+
     # Add noise
     if (noise_type == 'rician'):
         measurements = np.array([simulation_noise.add_rician_noise(measurement=measurement,
                                                                    signal_to_noise_ratio=signal_to_noise_ratio,
+                                                                   b_0_signal=b_0_signal,
                                                                    generator=noise_generator) for measurement in
                                  measurements])
     elif (noise_type == 'none'):
