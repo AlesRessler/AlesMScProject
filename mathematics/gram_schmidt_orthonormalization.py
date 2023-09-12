@@ -15,6 +15,7 @@ def gram_schmidt_orthonormalization(vector):
     vector2 = None
 
     while (True):
+        # Fixing RNG seed is not necessary as long as the smaller DT eigenvalues are equal
         vector2 = np.random.rand(3)
         vector2 /= np.linalg.norm(vector2)
 

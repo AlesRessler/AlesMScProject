@@ -1,3 +1,7 @@
+import multiprocessing
+from math import ceil
+from multiprocessing import Pool
+
 import numpy as np
 from numpy.linalg import pinv, norm
 
@@ -87,7 +91,7 @@ def load_dt_simulated(number_of_data_points=90, b_value=1000, b_0_signal=3000, i
             qhat[1].append(random_unit_vector[1])
             qhat[2].append(random_unit_vector[2])
 
-            measurement = simulate_signal(b_value, random_unit_vector, b_0_signal, diffusion_tensor)
+            measurement = simulate_normalized_signal(b_value, random_unit_vector, b_0_signal, diffusion_tensor)
 
             noisy_measurement = None
 
@@ -158,9 +162,11 @@ def simulate_normalized_signal(b_value, gradient, b_0_signal, diffusion_tensor):
     b_0_signal (int): non-diffusion weighted signal
     diffusion_tensor (np.array(3x3)): diffusion tensor to be used for simulation
     """
+
     signal = np.exp(-b_value * (gradient.T @ diffusion_tensor @ gradient))
 
     return signal
+
 
 def generate_random_unit_vector(dimension, generator):
     """
@@ -184,8 +190,7 @@ def generate_random_unit_vector(dimension, generator):
 def load_dt_simulated_multiple_populations(number_of_data_points=90, b_value=1000, b_0_signal=3000, include_b_0=False,
                                            signal_to_noise_ratio=30, eigenvalues=[(1, 0, 0), (0, 1, 0)],
                                            eigenvectors=[None, None], fractions=[0.5, 0.5], noise_type='rician',
-                                           noise_generator_seed=1,
-                                           gradient_generator_seed=1):
+                                           noise_generator_seed=1, gradient_generator_seed=1):
     """
     Returns dataset simulated from the diffusion tensor model with specified number of data points, noise standard deviation and multiple fibre populations.
     
@@ -245,7 +250,6 @@ def load_dt_simulated_multiple_populations(number_of_data_points=90, b_value=100
         # Reset RNG to produce the same gradient orientations in next iteration
         gradient_generator = np.random.default_rng(gradient_generator_seed)
 
-
     # Add noise
     if (noise_type == 'rician'):
         measurements = np.array([simulation_noise.add_rician_noise(measurement=measurement,
@@ -265,7 +269,7 @@ def load_dt_simulated_dataset(dataset_size=1000, number_of_fibre_populations=2, 
                               signal_to_noise_ratio=30, noise_type='rician',
                               noise_generator_seed=1,
                               gradient_generator_seed=1,
-                              fibre_orientation_generator_seed=1, planar=False):
+                              fibre_orientation_generator_seed=1, planar=False, number_of_workers=None):
     """
     Parameters:
     dataset_size (int): number of datapoints to be generated
@@ -282,46 +286,42 @@ def load_dt_simulated_dataset(dataset_size=1000, number_of_fibre_populations=2, 
     gradient_generator_seed (int): generator seed used to create gradient directions (if None given then a new Generator with seed 1 is instantiated)
     fibre_orientation_generator_seed (int): generator seed used to generate fibre orientations
     planar (bool): determines whether fibre orientations should be rotated in 3D. If true then 2 fibre populations will by parallel to the XY-plane and if a third population is present it will be parallel to the Z-axis. Only the angles in the XY-plane change.
+    number_of_workers (int): number of concurrent workers to be used (if None is given the number is the same as number of CPUs)
 
     Returns:
     (np.array(n x number_of_coefficients), list_of_diffusion_weighted_data, np.array(nx3)): first object is an array of SH coefficients for each simulated fODF, second object is a list of diffusion-weighted data as defined in load_dt_simulated_multiple_populations function, third object contains row vectors of fibre orientations
     """
-
-    fODF_expansion_coefficients = []
-    fibre_orientations = []
     diffusion_weighted_data = []
     eigenvectors = []
-    volume_fractions = []
 
     fibre_orientation_generator = np.random.default_rng(fibre_orientation_generator_seed)
 
+    if number_of_workers is None:
+        number_of_workers = multiprocessing.cpu_count()
+
+    worker_generators = []
+
+    # Construct RNG generators for workers
+    for generator_seed in range(number_of_workers):
+        worker_generators.append(np.random.default_rng(fibre_orientation_generator_seed + generator_seed + 1))
+
+    # Define even chunk sizes for each worker
+    worker_chunk = ceil(dataset_size/number_of_workers)
+
     # Generate random fibre orientations and volume fractions
-    for i in range(dataset_size):
-        fibre_orientations.append([])
+    print('Generating fibre orientations and volume fractions...')
+    with Pool(number_of_workers) as pool:
+        fibre_orientations_and_volume_fractions = pool.starmap(generate_fibre_orientations_and_fractions,
+                                                               [(worker_chunk, number_of_fibre_populations, planar,
+                                                                 worker_generator)
+                                                                for worker_generator in worker_generators])
 
-        for j in range(number_of_fibre_populations):
-            random_direction = None
-
-            if (planar):
-                if (j == 0 or j==1):
-                    random_direction = generate_random_unit_vector(dimension=3, generator=fibre_orientation_generator)
-                    random_direction[2] = 0.0
-                    random_direction /= np.linalg.norm(random_direction)
-                elif (j == 2):
-                    random_direction = np.array([0.0, 0.0, 1.0])
-            else:
-                random_direction = generate_random_unit_vector(dimension=3, generator=fibre_orientation_generator)
-
-            fibre_orientations[i].append(random_direction)
-
-        fractions = fibre_orientation_generator.uniform(low=0.05, high=1, size=number_of_fibre_populations)
-        fractions = fractions / np.sum(fractions)
-        fractions = fractions.tolist()
-        volume_fractions.append(fractions)
-
-        fibre_orientations[i] = np.array(fibre_orientations[i])
+    fibre_orientations, volume_fractions = collect_fibre_orientations_and_fractions(
+        fibre_orientations_and_volume_fractions)
 
     # Generate SH expansion coefficients of the fODFs from fibre orientations
+    fODF_expansion_coefficients = []
+
     for i in range(dataset_size):
         fODF_expansion_coefficients_temp = load_fodf_simulated(max_degree=max_degree,
                                                                fibre_orientations=fibre_orientations[i],
@@ -330,14 +330,11 @@ def load_dt_simulated_dataset(dataset_size=1000, number_of_fibre_populations=2, 
 
     fODF_expansion_coefficients = np.array(fODF_expansion_coefficients)
 
-    eigenvalues = []
-
     # Set the diffusion tensor eigenvalues for each fibre population
-    for i in range(number_of_fibre_populations):
-        if (fibre_population_eigenvalues is None):
-            eigenvalues.append((0.003, 0.0002, 0.0002))
-        else:
-            eigenvalues.append(fibre_population_eigenvalues)
+    if (fibre_population_eigenvalues is None):
+        eigenvalues = [(0.003, 0.0002, 0.0002)] * dataset_size
+    else:
+        eigenvalues = [fibre_population_eigenvalues] * dataset_size
 
     # Generate diffusion tensor eigenvectors from fibre orientations
     for i in range(dataset_size):
@@ -363,6 +360,50 @@ def load_dt_simulated_dataset(dataset_size=1000, number_of_fibre_populations=2, 
     fibre_orientations = np.array(fibre_orientations)
 
     return (fODF_expansion_coefficients, diffusion_weighted_data, fibre_orientations)
+
+
+def collect_fibre_orientations_and_fractions(parallel_result):
+    fibre_orientations = []
+    volume_fractions = []
+
+    for i in range(len(parallel_result)):
+        fibre_orientations += parallel_result[i][0]
+        volume_fractions += parallel_result[i][1]
+
+    return fibre_orientations, volume_fractions
+
+
+def generate_fibre_orientations_and_fractions(dataset_size, number_of_fibre_populations, planar,
+                                              fibre_orientation_generator):
+    fibre_orientations = []
+    volume_fractions = []
+
+    for i in range(dataset_size):
+        fibre_orientations.append([])
+
+        for j in range(number_of_fibre_populations):
+            random_direction = None
+
+            if planar:
+                if j == 0 or j == 1:
+                    random_direction = generate_random_unit_vector(dimension=3, generator=fibre_orientation_generator)
+                    random_direction[2] = 0.0
+                    random_direction /= np.linalg.norm(random_direction)
+                elif j == 2:
+                    random_direction = np.array([0.0, 0.0, 1.0])
+            else:
+                random_direction = generate_random_unit_vector(dimension=3, generator=fibre_orientation_generator)
+
+            fibre_orientations[i].append(random_direction)
+
+        fractions = fibre_orientation_generator.uniform(low=0.05, high=1, size=number_of_fibre_populations)
+        fractions = fractions / np.sum(fractions)
+        fractions = fractions.tolist()
+        volume_fractions.append(fractions)
+
+        fibre_orientations[i] = np.array(fibre_orientations[i])
+
+    return fibre_orientations, volume_fractions
 
 
 def save_dt_simulated_dataset(dataset, path):
@@ -408,7 +449,8 @@ def rotate_dt_simulated_dataset(fibre_orientations, number_of_fibre_populations=
     # Generate random rotations and volume fractions
     for i in range(dataset_size):
         rotation_angles = fibre_orientation_generator.uniform(low=0.0, high=2 * np.pi, size=3)
-        yaw_pitch_roll = yaw_pitch_roll_matrix(alpha=rotation_angles[0], beta=rotation_angles[1], gamma=rotation_angles[2])
+        yaw_pitch_roll = yaw_pitch_roll_matrix(alpha=rotation_angles[0], beta=rotation_angles[1],
+                                               gamma=rotation_angles[2])
         rotated_fibre_orientations.append([])
 
         for j in range(number_of_fibre_populations):

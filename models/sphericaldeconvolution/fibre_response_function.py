@@ -1,12 +1,12 @@
 import numpy as np
 
-from dataloader.load_dt_simulated import compute_diffusion_tensor, simulate_signal, simulate_normalized_signal
+from dataloader.load_dt_simulated import compute_diffusion_tensor, simulate_normalized_signal
 from mathematics.gram_schmidt_orthonormalization import gram_schmidt_orthonormalization
 
 
 def simple_fibre_response_function(b_vector, fibre_orientations, diffusion_time, diffusivity):
     """
-    Compute value(s) of fibre response function defined below.
+    Compute normalized value(s) of stick fibre response function defined below.
     
     Parameters:
     b_vector (np.array(1x3)): specifies vector describing the orientation and magnitude of the magnetic gradient
