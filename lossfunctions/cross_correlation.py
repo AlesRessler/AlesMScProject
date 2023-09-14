@@ -25,4 +25,5 @@ class CrossCorrelationLoss(nn.Module):
 
     def forward(self, predictions, targets):
         cross_correlation_loss = (torch.sum(torch.square(predictions), dim=1) + torch.sum(torch.square(targets), dim=1) - 2 * torch.sum(predictions * targets, dim=1))
+        cross_correlation_loss = torch.mean(cross_correlation_loss)
         return cross_correlation_loss
