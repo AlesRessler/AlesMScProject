@@ -329,12 +329,14 @@ def load_dt_simulated_dataset(dataset_size=1000, number_of_fibre_populations=2, 
 
     fODF_expansion_coefficients = np.array(fODF_expansion_coefficients)
 
+    eigenvalues = []
+
     # Set the diffusion tensor eigenvalues for each fibre population
-    print('Setting diffusion tensor eigenvalues...')
-    if fibre_population_eigenvalues is None:
-        eigenvalues = [(0.003, 0.0002, 0.0002)] * dataset_size
-    else:
-        eigenvalues = [fibre_population_eigenvalues] * dataset_size
+    for i in range(number_of_fibre_populations):
+        if fibre_population_eigenvalues is None:
+            eigenvalues.append((0.003, 0.0002, 0.0002))
+        else:
+            eigenvalues.append(fibre_population_eigenvalues)
 
     # Generate diffusion tensor eigenvectors from fibre orientations
     print('Generating diffusion tensor eigenvectors...')
@@ -349,6 +351,8 @@ def load_dt_simulated_dataset(dataset_size=1000, number_of_fibre_populations=2, 
                                                 for i in range(dataset_size)])
 
     fibre_orientations = np.array(fibre_orientations)
+
+    print('Done')
 
     return fODF_expansion_coefficients, diffusion_weighted_data, fibre_orientations
 
@@ -387,7 +391,7 @@ def generate_fibre_orientations_and_fractions(dataset_size, number_of_fibre_popu
 
             fibre_orientations[i].append(random_direction)
 
-        fractions = fibre_orientation_generator.uniform(low=0.05, high=1, size=number_of_fibre_populations)
+        fractions = fibre_orientation_generator.uniform(low=0.3, high=1, size=number_of_fibre_populations)
         fractions = fractions / np.sum(fractions)
         fractions = fractions.tolist()
         volume_fractions.append(fractions)
@@ -449,7 +453,7 @@ def rotate_dt_simulated_dataset(fibre_orientations, number_of_fibre_populations=
 
         rotated_fibre_orientations[i] = np.array(rotated_fibre_orientations[i])
 
-        fractions = fibre_orientation_generator.uniform(low=0.05, high=1, size=number_of_fibre_populations)
+        fractions = fibre_orientation_generator.uniform(low=0.3, high=1, size=number_of_fibre_populations)
         fractions = fractions / np.sum(fractions)
         fractions = fractions.tolist()
         volume_fractions.append(fractions)

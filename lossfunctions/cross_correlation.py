@@ -22,7 +22,6 @@ def generate_mask(max_degree):
 class CrossCorrelationLoss(nn.Module):
     def __init__(self, max_degree, device='mps'):
         super(CrossCorrelationLoss, self).__init__()
-        self.mask = generate_mask(max_degree).to(device)
 
     def forward(self, predictions, targets):
         cross_correlation_loss = (torch.sum(torch.square(predictions), dim=1) + torch.sum(torch.square(targets), dim=1) - 2 * torch.sum(predictions * targets, dim=1))
