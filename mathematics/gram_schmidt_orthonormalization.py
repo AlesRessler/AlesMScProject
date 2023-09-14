@@ -28,3 +28,21 @@ def gram_schmidt_orthonormalization(vector):
     vector3 = np.cross(vector1, vector2)
 
     return np.array([vector1, vector2, vector3]).T
+
+def gram_schmidt_orthonormalization_multiple(vectors):
+    """
+    Computes N 3D orthonormal bases given N 3D vectors.
+
+    Parameters:
+    vectors (np.array(Nx3)): 3D vector
+
+    Returns:
+    ([np.array(3x3)]) 3D orthonormal basis with basis vectors as columns
+    """
+
+    bases = []
+
+    for i in range(len(vectors)):
+        bases.append(gram_schmidt_orthonormalization(vectors[i]))
+
+    return bases

@@ -7,7 +7,8 @@ from numpy.linalg import pinv, norm
 
 from dataloader import simulation_noise
 from dataloader.load_fodf_simulated import load_fodf_simulated
-from mathematics.gram_schmidt_orthonormalization import gram_schmidt_orthonormalization
+from mathematics.gram_schmidt_orthonormalization import gram_schmidt_orthonormalization, \
+    gram_schmidt_orthonormalization_multiple
 from mathematics.vector_rotation import yaw_pitch_roll_matrix
 
 
@@ -291,10 +292,7 @@ def load_dt_simulated_dataset(dataset_size=1000, number_of_fibre_populations=2, 
     Returns:
     (np.array(n x number_of_coefficients), list_of_diffusion_weighted_data, np.array(nx3)): first object is an array of SH coefficients for each simulated fODF, second object is a list of diffusion-weighted data as defined in load_dt_simulated_multiple_populations function, third object contains row vectors of fibre orientations
     """
-    diffusion_weighted_data = []
-    eigenvectors = []
-
-    fibre_orientation_generator = np.random.default_rng(fibre_orientation_generator_seed)
+    # TODO remove b_O_signal from simulation since the signals are normalized (meanwhile used b_0_signal=1)
 
     if number_of_workers is None:
         number_of_workers = multiprocessing.cpu_count()
@@ -306,7 +304,7 @@ def load_dt_simulated_dataset(dataset_size=1000, number_of_fibre_populations=2, 
         worker_generators.append(np.random.default_rng(fibre_orientation_generator_seed + generator_seed + 1))
 
     # Define even chunk sizes for each worker
-    worker_chunk = ceil(dataset_size/number_of_workers)
+    worker_chunk = ceil(dataset_size / number_of_workers)
 
     # Generate random fibre orientations and volume fractions
     print('Generating fibre orientations and volume fractions...')
@@ -315,51 +313,44 @@ def load_dt_simulated_dataset(dataset_size=1000, number_of_fibre_populations=2, 
                                                                [(worker_chunk, number_of_fibre_populations, planar,
                                                                  worker_generator)
                                                                 for worker_generator in worker_generators])
-
     fibre_orientations, volume_fractions = collect_fibre_orientations_and_fractions(
         fibre_orientations_and_volume_fractions)
 
-    # Generate SH expansion coefficients of the fODFs from fibre orientations
-    fODF_expansion_coefficients = []
+    # Cut off extra data that emerged due to dataset_size not being divisible by number of workers
+    fibre_orientations = fibre_orientations[:dataset_size]
+    volume_fractions = volume_fractions[:dataset_size]
 
-    for i in range(dataset_size):
-        fODF_expansion_coefficients_temp = load_fodf_simulated(max_degree=max_degree,
-                                                               fibre_orientations=fibre_orientations[i],
-                                                               fibre_fractions=volume_fractions[i])
-        fODF_expansion_coefficients.append(fODF_expansion_coefficients_temp)
+    # Generate SH expansion coefficients of the fODFs from fibre orientations
+    print('Generating fODF spherical harmonics coefficients...')
+    with Pool(number_of_workers) as pool:
+        fODF_expansion_coefficients = pool.starmap(load_fodf_simulated,
+                                                   [(max_degree, fibre_orientations[i], volume_fractions[i])
+                                                    for i in range(dataset_size)])
 
     fODF_expansion_coefficients = np.array(fODF_expansion_coefficients)
 
     # Set the diffusion tensor eigenvalues for each fibre population
-    if (fibre_population_eigenvalues is None):
+    print('Setting diffusion tensor eigenvalues...')
+    if fibre_population_eigenvalues is None:
         eigenvalues = [(0.003, 0.0002, 0.0002)] * dataset_size
     else:
         eigenvalues = [fibre_population_eigenvalues] * dataset_size
 
     # Generate diffusion tensor eigenvectors from fibre orientations
-    for i in range(dataset_size):
-        eigenvectors.append([])
-        for j in range(number_of_fibre_populations):
-            eigenvectors[i].append(gram_schmidt_orthonormalization(fibre_orientations[i][j]))
+    print('Generating diffusion tensor eigenvectors...')
+    with Pool(number_of_workers) as pool:
+        eigenvectors = pool.map(gram_schmidt_orthonormalization_multiple, fibre_orientations)
 
     # Simulate diffusion-weighted signals using the diffusion tensor model
-    for i in range(dataset_size):
-        diffusion_weighted_data_temp = load_dt_simulated_multiple_populations(
-            number_of_data_points=number_of_data_points, b_value=b_value,
-            b_0_signal=b_0_signal, include_b_0=include_b_0,
-            signal_to_noise_ratio=signal_to_noise_ratio,
-            eigenvalues=eigenvalues,
-            eigenvectors=eigenvectors[i],
-            fractions=volume_fractions[i],
-            noise_type=noise_type,
-            noise_generator_seed=noise_generator_seed + i,
-            gradient_generator_seed=gradient_generator_seed)
-
-        diffusion_weighted_data.append(diffusion_weighted_data_temp)
+    print('Simulating DW signals...')
+    with Pool(number_of_workers) as pool:
+        diffusion_weighted_data = pool.starmap(load_dt_simulated_multiple_populations,
+                                               [(number_of_data_points, b_value, b_0_signal, include_b_0, signal_to_noise_ratio, eigenvalues, eigenvectors[i], volume_fractions[i], noise_type, noise_generator_seed + i, gradient_generator_seed)
+                                                for i in range(dataset_size)])
 
     fibre_orientations = np.array(fibre_orientations)
 
-    return (fODF_expansion_coefficients, diffusion_weighted_data, fibre_orientations)
+    return fODF_expansion_coefficients, diffusion_weighted_data, fibre_orientations
 
 
 def collect_fibre_orientations_and_fractions(parallel_result):
