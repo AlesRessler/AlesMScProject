@@ -51,6 +51,10 @@ class SphericalConvolution(torch.nn.Module):
         print(weights_expanded.unsqueeze(0).shape)
         print('x.unsqueeze(1).shape')
         print(x.unsqueeze(1).shape)
+        print('(weights_expanded.unsqueeze(0)* x.unsqueeze(1)).shape')
+        print((weights_expanded.unsqueeze(0)* x.unsqueeze(1)).shape)
+        print('(weights_expanded.unsqueeze(0)* x.unsqueeze(1)* torch.sqrt(np.pi / (2 * self.ls.unsqueeze(0).unsqueeze(0).unsqueeze(0) + 1))).shape')
+        print((weights_expanded.unsqueeze(0)* x.unsqueeze(1)* torch.sqrt(np.pi / (2 * self.ls.unsqueeze(0).unsqueeze(0).unsqueeze(0) + 1))).shape)
 
         spherical_convolution = torch.sum(
             torch.sqrt(
